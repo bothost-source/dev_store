@@ -16,7 +16,7 @@ class AuthService {
     required String password,
     required String displayName,
     bool isDeveloper = false,
-    Map<String, dynamic>? developerProfile,
+    DeveloperProfile? developerProfile,  // ✅ CHANGED: was Map<String, dynamic>?
   }) async {
     try {
       final credential = await _auth.createUserWithEmailAndPassword(
@@ -35,7 +35,7 @@ class AuthService {
           isDeveloper: isDeveloper,
           createdAt: DateTime.now(),
           lastLoginAt: DateTime.now(),
-          developerProfile: developerProfile,
+          developerProfile: developerProfile,  // ✅ Now matches DeveloperProfile? type
         );
 
         await _firestore

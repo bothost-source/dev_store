@@ -1,5 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import ' ../models/user_model.dart';
+import '../models/user_model.dart';
 import '../models/report_model.dart';
 import '../../core/constants/app_constants.dart';
 

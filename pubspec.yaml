@@ -59,7 +59,7 @@ dependencies:
 
   # S3 Compatible Storage (Storj)
   minio: ^3.5.18
-  aws_s3_api: ^0.7.0
+  aws_s3_api: ^2.0.0
 
   # APK Installation
   apk_sideload: ^0.0.1

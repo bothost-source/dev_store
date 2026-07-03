@@ -13,19 +13,16 @@ class DownloadService {
     _dio.options.receiveTimeout = const Duration(minutes: 5);
   }
 
-  // Download APK with progress
   Future<String> downloadApk({
     required String url,
     required String fileName,
     required Function(int received, int total) onProgress,
   }) async {
-    // Request storage permission
     final status = await Permission.storage.request();
     if (!status.isGranted) {
       throw Exception('Storage permission denied');
     }
 
-    // Get download directory
     final dir = await getExternalStorageDirectory() ?? await getApplicationDocumentsDirectory();
     final downloadDir = Directory('${dir.path}/devstore_downloads');
     if (!await downloadDir.exists()) {
@@ -35,12 +32,10 @@ class DownloadService {
     final filePath = path.join(downloadDir.path, fileName);
     final file = File(filePath);
 
-    // Delete if exists
     if (await file.exists()) {
       await file.delete();
     }
 
-    // Download
     await _dio.download(
       url,
       filePath,
@@ -54,7 +49,6 @@ class DownloadService {
     return filePath;
   }
 
-  // Install APK — uses open_filex instead of apk_sideload
   Future<void> installApk(String filePath) async {
     if (!Platform.isAndroid) {
       throw UnsupportedError('APK installation is only supported on Android');
@@ -67,19 +61,16 @@ class DownloadService {
     }
   }
 
-  // Open downloaded file
   Future<void> openFile(String filePath) async {
     await OpenFilex.open(filePath);
   }
 
-  // Check if file exists
   Future<bool> isDownloaded(String fileName) async {
     final dir = await getExternalStorageDirectory() ?? await getApplicationDocumentsDirectory();
     final file = File('${dir.path}/devstore_downloads/$fileName');
     return await file.exists();
   }
 
-  // Get downloaded file path
   Future<String?> getDownloadedFilePath(String fileName) async {
     final dir = await getExternalStorageDirectory() ?? await getApplicationDocumentsDirectory();
     final file = File('${dir.path}/devstore_downloads/$fileName');
@@ -89,7 +80,6 @@ class DownloadService {
     return null;
   }
 
-  // Delete downloaded file
   Future<void> deleteDownloadedFile(String fileName) async {
     final dir = await getExternalStorageDirectory() ?? await getApplicationDocumentsDirectory();
     final file = File('${dir.path}/devstore_downloads/$fileName');
@@ -98,7 +88,6 @@ class DownloadService {
     }
   }
 
-  // Get download progress stream
   Stream<double> downloadWithProgress({
     required String url,
     required String fileName,
@@ -110,9 +99,7 @@ class DownloadService {
       url,
       filePath,
       onReceiveProgress: (received, total) {
-        if (total != -1) {
-          // This would need a stream controller in real implementation
-        }
+        if (total != -1) {}
       },
     );
 

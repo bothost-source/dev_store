@@ -80,8 +80,10 @@ class StorjService {
 
   Future<int> getBucketUsage(String bucket) async {
     int totalSize = 0;
-    await for (final object in _minio.listObjects(bucket)) {
-      totalSize += object.size ?? 0;
+    await for (final result in _minio.listObjects(bucket)) {
+      for (final object in result.objects) {
+        totalSize += object.size ?? 0;
+      }
     }
     return totalSize;
   }

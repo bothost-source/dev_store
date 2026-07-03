@@ -34,11 +34,12 @@ class AppColors {
   static const Color lightText = Color(0xFF2D3436);
   static const Color lightTextMuted = Color(0xFF636E72);
 
-  static Color get background => lightBackground;
-  static Color get surface => lightSurface;
-  static Color get card => lightCard;
-  static Color get text => lightText;
-  static Color get textMuted => lightTextMuted;
+  // CHANGED: static const instead of getters for const compatibility
+  static const Color background = lightBackground;
+  static const Color surface = lightSurface;
+  static const Color card = lightCard;
+  static const Color text = lightText;
+  static const Color textMuted = lightTextMuted;
 
   static const LinearGradient primaryGradient = LinearGradient(
     colors: [primary, primaryLight],

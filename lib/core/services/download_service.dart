@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
-import 'package:apk_sideload/install_apk.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:open_filex/open_filex.dart';
 
@@ -55,12 +54,16 @@ class DownloadService {
     return filePath;
   }
 
-  // Install APK
+  // Install APK — uses open_filex instead of apk_sideload
   Future<void> installApk(String filePath) async {
-    if (Platform.isAndroid) {
-      await InstallApk().installApk(filePath);
-    } else {
+    if (!Platform.isAndroid) {
       throw UnsupportedError('APK installation is only supported on Android');
+    }
+
+    final result = await OpenFilex.open(filePath);
+
+    if (result.type != ResultType.done) {
+      throw Exception('Failed to open APK installer: ${result.message}');
     }
   }
 

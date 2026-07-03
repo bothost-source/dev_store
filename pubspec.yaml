@@ -62,7 +62,7 @@ dependencies:
   aws_s3_api: ^2.0.0
 
   # APK Installation
-  apk_sideload: ^0.0.1
+  # apk_sideload: ^0.0.1
 
   # Other
   uuid: ^4.4.0

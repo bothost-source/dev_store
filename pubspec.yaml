@@ -50,15 +50,15 @@ dependencies:
   intl: ^0.19.0
   shared_preferences: ^2.2.3
   package_info_plus: ^8.0.0
-  device_info_plus: ^10.0.0
+  device_info_plus: ^11.0.0
   permission_handler: ^11.3.1
-  open_filex: ^4.4.0
+  open_filex: ^4.7.0
   url_launcher: ^6.2.6
   share_plus: ^9.0.0
   connectivity_plus: ^6.0.0
 
   # S3 Compatible Storage (Storj)
-  minio: ^3.5.18
+  minio: ^3.5.8
   aws_s3_api: ^2.0.0
 
   # APK Installation

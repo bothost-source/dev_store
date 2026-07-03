@@ -1,0 +1,85 @@
+name: devstore
+description: "DEVSTORE - A real app store for developers"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # Firebase
+  firebase_core: ^3.0.0
+  firebase_auth: ^5.0.0
+  cloud_firestore: ^5.0.0
+  firebase_storage: ^12.0.0
+  firebase_messaging: ^15.0.0
+  firebase_analytics: ^11.0.0
+  cloud_functions: ^5.0.0
+
+  # State Management
+  flutter_bloc: ^8.1.6
+  provider: ^6.1.2
+  equatable: ^2.0.5
+
+  # Networking & Downloads
+  dio: ^5.4.0
+  http: ^1.2.0
+
+  # Storage & File Handling
+  path_provider: ^2.1.2
+  path: ^1.9.0
+  file_picker: ^8.0.0
+  image_picker: ^1.1.0
+
+  # UI
+  cached_network_image: ^3.3.1
+  shimmer: ^3.0.0
+  flutter_staggered_grid_view: ^0.7.0
+  carousel_slider: ^4.2.1
+  flutter_rating_bar: ^4.0.1
+  google_fonts: ^6.2.1
+  flutter_svg: ^2.0.10
+  lottie: ^3.1.2
+
+  # Utilities
+  intl: ^0.19.0
+  shared_preferences: ^2.2.3
+  package_info_plus: ^8.0.0
+  device_info_plus: ^10.0.0
+  permission_handler: ^11.3.1
+  open_filex: ^4.4.0
+  url_launcher: ^6.2.6
+  share_plus: ^9.0.0
+  connectivity_plus: ^6.0.0
+
+  # S3 Compatible Storage (Storj)
+  minio: ^3.5.18
+  aws_s3_api: ^0.7.0
+
+  # APK Installation
+  apk_sideload: ^0.0.1
+
+  # Other
+  uuid: ^4.4.0
+  timeago: ^3.7.0
+  fluttertoast: ^8.2.6
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  build_runner: ^2.4.11
+  json_serializable: ^6.8.0
+
+flutter:
+  uses-material-design: true
+  generate: true
+
+  assets:
+    - assets/images/
+    - assets/icons/

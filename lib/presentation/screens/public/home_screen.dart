@@ -88,7 +88,7 @@ class HomeScreen extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionHeader(title: l10n.featureed, onSeeAll: () {}),
+       SectionHeader(title: 'Featured', onSeeAll: () {}),
         SizedBox(
           height: 200,
           child: ListView.builder(

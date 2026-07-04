@@ -22,11 +22,10 @@ jobs:
           flutter-version: '3.22.0'
           channel: 'stable'
 
-      - name: Create asset folders
+      - name: Ensure asset folders exist
         run: |
-          mkdir -p assets/images assets/icons
-          touch assets/images/.gitkeep
-          touch assets/icons/.gitkeep
+          test -d assets/images || mkdir -p assets/images
+          test -d assets/icons || mkdir -p assets/icons
 
       - name: Recreate Android project
         run: |

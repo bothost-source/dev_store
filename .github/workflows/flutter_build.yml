@@ -6,15 +6,6 @@ on:
   pull_request:
     branches: [main, master]
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: "pages"
-  cancel-in-progress: false
-
 jobs:
   build-android:
     runs-on: ubuntu-latest
@@ -33,10 +24,32 @@ jobs:
       - name: Generate localizations
         run: flutter gen-l10n
 
-      - name: Build APK
-        run: flutter build apk --release
+      - name: Check Android manifest
+        run: |
+          echo "=== AndroidManifest.xml ==="
+          cat android/app/src/main/AndroidManifest.xml
+          echo ""
+          echo "=== MainActivity.kt ==="
+          find android -name "MainActivity.kt" -exec cat {} \;
+          echo ""
+          echo "=== gradle.properties ==="
+          cat android/gradle.properties
+          echo ""
+          echo "=== build.gradle (app) ==="
+          cat android/app/build.gradle
+
+      - name: Build APK (verbose)
+        run: flutter build apk --release --verbose 2>&1 | tail -200
+        continue-on-error: true
+
+      - name: Show full error log
+        if: failure()
+        run: |
+          echo "=== FULL BUILD LOG ==="
+          flutter build apk --release --verbose 2>&1 | grep -E "error|Error|FAIL|v1|embedding|Registrar|flutterEmbedding" | head -50
 
       - name: Upload APK
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: devstore-apk
@@ -59,36 +72,20 @@ jobs:
       - name: Generate localizations
         run: flutter gen-l10n
 
+      - name: Verify main_admin.dart exists
+        run: |
+          echo "=== Checking lib/ contents ==="
+          ls -la lib/
+          echo ""
+          echo "=== Checking main_admin.dart ==="
+          test -f lib/main_admin.dart && echo "EXISTS" || echo "NOT FOUND"
+
       - name: Build Web (Admin Panel)
-        run: flutter build web --release -t lib/main_admin.dart
+        run: flutter build web --release -t lib/main_admin.dart --verbose 2>&1 | tail -100
 
       - name: Upload Web Build
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: devstore-web
           path: build/web
-
-  deploy-web:
-    needs: build-web
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Download Web Build
-        uses: actions/download-artifact@v4
-        with:
-          name: devstore-web
-          path: build/web
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
-
-      - name: Upload to Pages
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: build/web
-
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4

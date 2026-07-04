@@ -155,7 +155,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         final updatedUser = currentState.user.copyWith(
           isDeveloper: true,
           role: 'developer',
-          developerProfile: event.profile,
+          developerProfile: event.profile != null 
+          ? DeveloperProfile.fromMap(event.profile as Map<String, dynamic>) 
+         : null,
         );
         emit(Authenticated(updatedUser));
       }

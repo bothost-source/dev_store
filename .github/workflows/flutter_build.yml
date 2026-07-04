@@ -1,19 +1,14 @@
 name: devstore
 
-on:
-  push:
-    branches: [main, master]
-  pull_request:
-    branches: [main, master]
-
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
-concurrency:
-  group: "pages"
-  cancel-in-progress: false
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
 
 jobs:
   build-android:
@@ -27,6 +22,46 @@ jobs:
           flutter-version: '3.22.0'
           channel: 'stable'
 
+      - name: Recreate Android project
+        run: |
+          # Backup google-services.json
+          cp android/app/google-services.json /tmp/google-services.json 2>/dev/null || true
+          # Backup other custom files
+          cp android/app/src/main/AndroidManifest.xml /tmp/AndroidManifest.xml 2>/dev/null || true
+          cp android/app/build.gradle /tmp/app-build.gradle 2>/dev/null || true
+          cp -r android/app/src/main/kotlin /tmp/kotlin-backup 2>/dev/null || true
+          # Remove and recreate
+          rm -rf android
+          flutter create . --platforms=android --org com.example
+          # Restore google-services.json
+          mkdir -p android/app
+          cp /tmp/google-services.json android/app/ 2>/dev/null || true
+          # Restore other files
+          cp /tmp/AndroidManifest.xml android/app/src/main/ 2>/dev/null || true
+          cp /tmp/app-build.gradle android/app/ 2>/dev/null || true
+          cp -r /tmp/kotlin-backup/* android/app/src/main/kotlin/ 2>/dev/null || true
+
+      - name: Add Firebase plugin to app build.gradle
+        run: |
+          sed -i 's/id "dev.flutter.flutter-gradle-plugin"/id "dev.flutter.flutter-gradle-plugin"\n    id "com.google.gms.google-services" version "4.4.0"/' android/app/build.gradle
+
+      - name: Add Firebase plugin to settings.gradle
+        run: |
+          sed -i 's/id "org.jetbrains.kotlin.android" version "1.8.22" apply false/id "org.jetbrains.kotlin.android" version "1.8.22" apply false\n    id "com.google.gms.google-services" version "4.4.0" apply false/' android/settings.gradle
+
+      - name: Fix minSdkVersion
+        run: |
+          sed -i 's/flutter.minSdkVersion/21/g' android/app/build.gradle
+
+      - name: Setup MainActivity
+        run: |
+          mkdir -p android/app/src/main/kotlin/com/example/devstore
+          cat > android/app/src/main/kotlin/com/example/devstore/MainActivity.kt << 'EOF'
+          package com.example.devstore
+          import io.flutter.embedding.android.FlutterActivity
+          class MainActivity: FlutterActivity()
+          EOF
+
       - name: Get dependencies
         run: flutter pub get
 
@@ -34,10 +69,7 @@ jobs:
         run: flutter gen-l10n
 
       - name: Build APK
-        run: |
-           flutter pub get
-           flutter build apk --release --no-pub
-
+        run: flutter build apk --release
 
       - name: Upload APK
         uses: actions/upload-artifact@v4

@@ -72,13 +72,13 @@ class DownloadBloc extends Bloc<DownloadEvent, DownloadState> {
   }
 
   Future<void> _onStartDownload(StartDownload event, Emitter<DownloadState> emit) async {
-    emit(DownloadInProgress(progress: 0, received: 0, total: 0));
+    emit(const DownloadInProgress(progress: 0, received: 0, total: 0));
     try {
       final filePath = await _downloadService.downloadApk(
         url: event.url,
         fileName: event.fileName,
         onProgress: (received, total) {
-          final progress = total > 0 ? received / total : 0;
+          final progress = total > 0 ? (received / total).toDouble() : 0.0;  // ✅ FIXED: cast to double
           emit(DownloadInProgress(
             progress: progress,
             received: received,

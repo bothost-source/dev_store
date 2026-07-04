@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:minio/minio.dart';
 import 'package:path/path.dart' as path;
 import '../constants/app_constants.dart';
@@ -37,9 +38,8 @@ class StorjService {
       final bucket = specificBucket ?? _currentBucket;
       final objectPath = '$folder/$fileName';
 
-      // Use putObject with file stream instead of fPutObject
       final fileLength = await file.length();
-      final fileStream = file.openRead();
+      final fileStream = file.openRead().map((chunk) => Uint8List.fromList(chunk));
       await _minio.putObject(bucket, objectPath, fileStream, size: fileLength);
 
       return '$bucket/$objectPath';
@@ -49,7 +49,7 @@ class StorjService {
         final objectPath = '$folder/$fileName';
 
         final fileLength = await file.length();
-        final fileStream = file.openRead();
+        final fileStream = file.openRead().map((chunk) => Uint8List.fromList(chunk));
         await _minio.putObject(fallbackBucket, objectPath, fileStream, size: fileLength);
 
         return '$fallbackBucket/$objectPath';

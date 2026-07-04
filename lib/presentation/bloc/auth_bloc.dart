@@ -166,7 +166,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 }
 
 extension on UserModel {
-  UserModel copyWith({bool? isDeveloper, String? role, Map<String, dynamic>? developerProfile}) {
+  UserModel copyWith({bool? isDeveloper, String? role, DeveloperProfile? developerProfile}) {
     return UserModel(
       uid: uid,
       email: email,

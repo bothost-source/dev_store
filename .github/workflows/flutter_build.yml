@@ -34,7 +34,10 @@ jobs:
         run: flutter gen-l10n
 
       - name: Build APK
-        run: flutter build apk --release
+        run: |
+           flutter pub get
+           flutter build apk --release --no-pub
+
 
       - name: Upload APK
         uses: actions/upload-artifact@v4

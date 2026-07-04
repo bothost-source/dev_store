@@ -67,7 +67,6 @@ dependencies:
   # Other
   uuid: ^4.4.0
   timeago: ^3.7.0
-  fluttertoast: ^8.2.6
 
 dev_dependencies:
   flutter_test:
@@ -80,6 +79,6 @@ flutter:
   uses-material-design: true
   generate: true
 
-  assets:
-    - assets/images/
-    - assets/icons/
+  # assets:  REMOVED - folders don't exist
+  #   - assets/images/
+  #   - assets/icons/

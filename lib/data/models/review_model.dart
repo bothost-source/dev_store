@@ -50,4 +50,29 @@ class ReviewModel {
       if (updatedAt != null) 'updatedAt': Timestamp.fromDate(updatedAt!),
     };
   }
+
+  // ADD THIS:
+  ReviewModel copyWith({
+    String? id,
+    String? appId,
+    String? userId,
+    String? userName,
+    String? userPhotoUrl,
+    double? rating,
+    String? comment,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return ReviewModel(
+      id: id ?? this.id,
+      appId: appId ?? this.appId,
+      userId: userId ?? this.userId,
+      userName: userName ?? this.userName,
+      userPhotoUrl: userPhotoUrl ?? this.userPhotoUrl,
+      rating: rating ?? this.rating,
+      comment: comment ?? this.comment,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
 }

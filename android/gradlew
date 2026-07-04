@@ -1,0 +1,6 @@
+- name: Setup Gradle wrapper
+  run: |
+    cd android
+    flutter pub get
+    # This generates gradlew if missing
+    flutter build apk --release --dry-run || true

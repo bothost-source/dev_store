@@ -40,7 +40,7 @@ jobs:
 
       - name: Fix minSdkVersion
         run: |
-          sed -i 's/flutter.minSdkVersion/21/g' android/app/build.gradle
+          sed -i 's/flutter.minSdkVersion/23/g' android/app/build.gradle
 
       - name: Setup MainActivity
         run: |

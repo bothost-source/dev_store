@@ -26,13 +26,9 @@ jobs:
         run: |
           cp android/app/google-services.json /tmp/google-services.json 2>/dev/null || true
           rm -rf android
-          flutter create . --platforms=android --org com.example --project-name devstore
+          flutter create . --platforms=android --org com.devstore --project-name app
           mkdir -p android/app
           cp /tmp/google-services.json android/app/ 2>/dev/null || true
-
-      - name: Fix package name
-        run: |
-          sed -i 's/applicationId "com.example.dev_store"/applicationId "com.example.devstore"/' android/app/build.gradle
 
       - name: Add Firebase plugin to app build.gradle
         run: |
@@ -48,9 +44,9 @@ jobs:
 
       - name: Setup MainActivity
         run: |
-          mkdir -p android/app/src/main/kotlin/com/example/devstore
-          cat > android/app/src/main/kotlin/com/example/devstore/MainActivity.kt << 'EOF'
-          package com.example.devstore
+          mkdir -p android/app/src/main/kotlin/com/devstore/app
+          cat > android/app/src/main/kotlin/com/devstore/app/MainActivity.kt << 'EOF'
+          package com.devstore.app
           import io.flutter.embedding.android.FlutterActivity
           class MainActivity: FlutterActivity()
           EOF

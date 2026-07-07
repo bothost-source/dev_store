@@ -22,11 +22,6 @@ jobs:
           flutter-version: '3.22.0'
           channel: 'stable'
 
-      - name: Ensure asset folders exist
-        run: |
-          test -d assets/images || mkdir -p assets/images
-          test -d assets/icons || mkdir -p assets/icons
-
       - name: Recreate Android project
         run: |
           cp android/app/google-services.json /tmp/google-services.json 2>/dev/null || true

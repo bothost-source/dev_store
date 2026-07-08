@@ -16,6 +16,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -51,8 +57,51 @@ jobs:
           class MainActivity: FlutterActivity()
           EOF
 
+      # ===== FIX: Set app name =====
+      - name: Set app name in AndroidManifest
+        run: |
+          sed -i 's/android:label="[^"]*"/android:label="DEVSTORE"/' android/app/src/main/AndroidManifest.xml
+
+      # ===== FIX: Create black splash theme =====
+      - name: Create black splash theme
+        run: |
+          mkdir -p android/app/src/main/res/values
+          mkdir -p android/app/src/main/res/values-night
+          mkdir -p android/app/src/main/res/drawable
+          
+          cat > android/app/src/main/res/values/styles.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <style name="LaunchTheme" parent="@android:style/Theme.Black.NoTitleBar">
+                  <item name="android:windowBackground">@drawable/launch_background</item>
+                  <item name="android:windowFullscreen">true</item>
+              </style>
+              <style name="NormalTheme" parent="@android:style/Theme.Black.NoTitleBar">
+                  <item name="android:windowBackground">@android:color/black</item>
+              </style>
+          </resources>
+          EOF
+          
+          cp android/app/src/main/res/values/styles.xml android/app/src/main/res/values-night/styles.xml
+          
+          cat > android/app/src/main/res/drawable/launch_background.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+              <item android:drawable="@android:color/black" />
+          </layer-list>
+          EOF
+
+      # ===== FIX: Create asset directories =====
+      - name: Create asset directories
+        run: |
+          mkdir -p assets/images assets/icons
+
       - name: Get dependencies
         run: flutter pub get
+
+      # ===== FIX: Generate app icons =====
+      - name: Generate app icons
+        run: flutter pub run flutter_launcher_icons
 
       - name: Generate localizations
         run: flutter gen-l10n

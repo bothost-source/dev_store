@@ -19,7 +19,7 @@ dependencies:
   firebase_storage: ^12.0.0
   firebase_messaging: ^15.0.0
   firebase_analytics: ^11.0.0
-  cloudFunctions: ^5.0.0
+  cloud_functions: ^5.0.0
 
   # Notifications
   flutter_local_notifications: ^18.0.0

@@ -57,12 +57,10 @@ jobs:
           class MainActivity: FlutterActivity()
           EOF
 
-      # ===== FIX: Set app name =====
       - name: Set app name in AndroidManifest
         run: |
           sed -i 's/android:label="[^"]*"/android:label="DEVSTORE"/' android/app/src/main/AndroidManifest.xml
 
-      # ===== FIX: Create black splash theme =====
       - name: Create black splash theme
         run: |
           mkdir -p android/app/src/main/res/values
@@ -91,15 +89,20 @@ jobs:
           </layer-list>
           EOF
 
-      # ===== FIX: Create asset directories =====
       - name: Create asset directories
         run: |
-          mkdir -p assets/images assets/icons
+          mkdir -p assets/images
+          if [ -f assets/icons ]; then
+            mv assets/icons /tmp/icons_backup
+            mkdir -p assets/icons
+            mv /tmp/icons_backup assets/icons/
+          else
+            mkdir -p assets/icons || true
+          fi
 
       - name: Get dependencies
         run: flutter pub get
 
-      # ===== FIX: Generate app icons =====
       - name: Generate app icons
         run: flutter pub run flutter_launcher_icons
 

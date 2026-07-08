@@ -32,6 +32,7 @@ jobs:
         run: |
           cp android/app/google-services.json /tmp/google-services.json 2>/dev/null || true
           rm -rf android
+          # Keep .dart_tool for flutter_gen
           flutter create . --platforms=android --org com.devstore --project-name app
           mkdir -p android/app
           cp /tmp/google-services.json android/app/ 2>/dev/null || true

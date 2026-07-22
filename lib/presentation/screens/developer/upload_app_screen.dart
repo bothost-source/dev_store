@@ -3,13 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
-import '../../../core/theme/app_colors.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/services/storj_service.dart';
 import '../../../data/models/app_model.dart';
 import '../../bloc/auth_bloc.dart';
-import '../public/main_screen.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:devstore/l10n/app_localizations.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class UploadAppScreen extends StatefulWidget {
@@ -34,6 +32,7 @@ class _UploadAppScreenState extends State<UploadAppScreen> {
   List<File> _screenshots = [];
   bool _isUploading = false;
   double _uploadProgress = 0;
+  bool _uploadSuccess = false;
 
   final StorjService _storjService = StorjService();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -50,21 +49,14 @@ class _UploadAppScreenState extends State<UploadAppScreen> {
   }
 
   Future<void> _pickApk() async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['apk'],
-    );
-    if (result != null) {
-      setState(() => _apkFile = File(result.files.single.path!));
-    }
+    final result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['apk']);
+    if (result != null) setState(() => _apkFile = File(result.files.single.path!));
   }
 
   Future<void> _pickIcon() async {
     final picker = ImagePicker();
     final image = await picker.pickImage(source: ImageSource.gallery);
-    if (image != null) {
-      setState(() => _iconFile = File(image.path));
-    }
+    if (image != null) setState(() => _iconFile = File(image.path));
   }
 
   Future<void> _pickScreenshots() async {
@@ -81,44 +73,34 @@ class _UploadAppScreenState extends State<UploadAppScreen> {
   }
 
   Future<void> _uploadApp() async {
-    if (!_formKey.currentState!.validate()) return;
-    if (_apkFile == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select an APK file')),
-      );
-      return;
-    }
-    if (_iconFile == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select an app icon')),
-      );
-      return;
-    }
+  if (!_formKey.currentState!.validate()) return;
+  if (_apkFile == null) {
+    _showSnackBar('Please select an APK file');
+    return;
+  }
+  if (_iconFile == null) {
+    _showSnackBar('Please select an app icon');
+    return;
+  }
 
-    final apkSize = await _apkFile!.length();
-    if (apkSize > AppConstants.maxApkSize) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('APK file is too large (max 500MB)')),
-      );
-      return;
-    }
-
+  final apkSize = await _apkFile!.length();
+  if (apkSize > AppConstants.maxApkSize) {
+    _showSnackBar('APK file is too large (max 500MB)');
+    return;
+  }
+    
     setState(() => _isUploading = true);
 
     try {
       final authState = context.read<AuthBloc>().state;
-      if (authState is! Authenticated) {
-        throw Exception('You must be logged in');
-      }
+      if (authState is! Authenticated) throw Exception('You must be logged in');
 
       final developerId = authState.user.uid;
       final developerName = authState.user.displayName;
       final appId = DateTime.now().millisecondsSinceEpoch.toString();
 
-      // Get available bucket
       final bucket = await _storjService.getAvailableBucket();
 
-      // Upload APK
       setState(() => _uploadProgress = 0.1);
       final apkPath = await _storjService.uploadFile(
         file: _apkFile!,
@@ -127,7 +109,6 @@ class _UploadAppScreenState extends State<UploadAppScreen> {
         specificBucket: bucket,
       );
 
-      // Upload Icon
       setState(() => _uploadProgress = 0.3);
       final iconPath = await _storjService.uploadFile(
         file: _iconFile!,
@@ -136,7 +117,6 @@ class _UploadAppScreenState extends State<UploadAppScreen> {
         specificBucket: bucket,
       );
 
-      // Upload Screenshots
       final screenshotUrls = <String>[];
       for (var i = 0; i < _screenshots.length; i++) {
         setState(() => _uploadProgress = 0.3 + (0.4 * (i / _screenshots.length)));
@@ -150,14 +130,8 @@ class _UploadAppScreenState extends State<UploadAppScreen> {
         screenshotUrls.add(_storjService.getPublicUrl(parts[0], parts.sublist(1).join('/')));
       }
 
-      // Parse tags
-      final tags = _tagsController.text
-          .split(',')
-          .map((t) => t.trim())
-          .where((t) => t.isNotEmpty)
-          .toList();
+      final tags = _tagsController.text.split(',').map((t) => t.trim()).where((t) => t.isNotEmpty).toList();
 
-      // Create app document
       setState(() => _uploadProgress = 0.9);
       final app = AppModel(
         id: appId,
@@ -183,42 +157,68 @@ class _UploadAppScreenState extends State<UploadAppScreen> {
 
       await _firestore.collection(AppConstants.appsCollection).doc(appId).set(app.toFirestore());
 
-      setState(() => _uploadProgress = 1.0);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context)!.appUploaded),
-            backgroundColor: AppColors.success,
-          ),
-        );
-        Navigator.of(context).pop();
-      }
+      setState(() {
+        _uploadProgress = 1.0;
+        _uploadSuccess = true;
+      });
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Upload failed: $e'), backgroundColor: Colors.red),
-        );
-      }
+      if (mounted) _showSnackBar('Upload failed: $e');
     } finally {
-      if (mounted) {
-        setState(() => _isUploading = false);
-      }
+      if (mounted) setState(() => _isUploading = false);
     }
+  }
+
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: const Color(0xFF1A1A1A)),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
 
+    // SUCCESS SCREEN
+    if (_uploadSuccess) {
+      return Scaffold(
+        backgroundColor: Colors.black,
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.check_circle_outline, size: 80, color: Colors.white),
+              const SizedBox(height: 24),
+              const Text('Upload Successful!', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white)),
+              const SizedBox(height: 16),
+              const Text(
+                'Your app has been submitted for review.\nYou will be notified once it is approved.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.white70, fontSize: 16),
+              ),
+              const SizedBox(height: 32),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.white, foregroundColor: Colors.black, padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 16)),
+                child: const Text('Done'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
+      backgroundColor: Colors.black,
       appBar: AppBar(
-        title: Text(l10n.uploadApp),
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+        title: Text(l10n.uploadApp, style: const TextStyle(color: Colors.white)),
+        elevation: 0,
         actions: [
           if (!_isUploading)
             TextButton(
               onPressed: _uploadApp,
-              child: Text(l10n.submit, style: const TextStyle(color: Colors.white)),
+              child: Text(l10n.submit, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
             ),
         ],
       ),
@@ -233,16 +233,14 @@ class _UploadAppScreenState extends State<UploadAppScreen> {
                     child: CircularProgressIndicator(
                       value: _uploadProgress,
                       strokeWidth: 8,
-                      backgroundColor: Colors.grey[200],
+                      backgroundColor: const Color(0xFF1A1A1A),
+                      valueColor: const AlwaysStoppedAnimation(Colors.white),
                     ),
                   ),
                   const SizedBox(height: 24),
-                  Text(
-                    'Uploading... ${(_uploadProgress * 100).toStringAsFixed(0)}%',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
+                  Text('Uploading... ${(_uploadProgress * 100).toStringAsFixed(0)}%', style: const TextStyle(color: Colors.white, fontSize: 20)),
                   const SizedBox(height: 8),
-                  const Text('Please do not close the app', style: TextStyle(color: AppColors.textMuted)),
+                  const Text('Please do not close the app', style: TextStyle(color: Colors.white70)),
                 ],
               ),
             )
@@ -253,33 +251,17 @@ class _UploadAppScreenState extends State<UploadAppScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // APK File
-                    _FilePickerCard(
-                      title: 'APK File',
-                      subtitle: _apkFile != null ? _apkFile!.path.split('/').last : 'Tap to select APK',
-                      icon: Icons.android,
-                      isSelected: _apkFile != null,
-                      onTap: _pickApk,
-                    ),
+                    _FilePickerCard(title: 'APK File', subtitle: _apkFile != null ? _apkFile!.path.split('/').last : 'Tap to select APK', icon: Icons.android, isSelected: _apkFile != null, onTap: _pickApk),
                     const SizedBox(height: 16),
-
-                    // Icon
                     _FilePickerCard(
                       title: 'App Icon',
                       subtitle: _iconFile != null ? 'Icon selected' : 'Tap to select icon',
                       icon: Icons.image,
                       isSelected: _iconFile != null,
                       onTap: _pickIcon,
-                      preview: _iconFile != null
-                          ? ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: Image.file(_iconFile!, width: 60, height: 60, fit: BoxFit.cover),
-                            )
-                          : null,
+                      preview: _iconFile != null ? ClipRRect(borderRadius: BorderRadius.circular(12), child: Image.file(_iconFile!, width: 60, height: 60, fit: BoxFit.cover)) : null,
                     ),
                     const SizedBox(height: 16),
-
-                    // Screenshots
                     _FilePickerCard(
                       title: 'Screenshots (${_screenshots.length}/${AppConstants.maxScreenshots})',
                       subtitle: _screenshots.isNotEmpty ? '${_screenshots.length} selected' : 'Tap to select screenshots',
@@ -293,112 +275,70 @@ class _UploadAppScreenState extends State<UploadAppScreen> {
                         child: ListView.builder(
                           scrollDirection: Axis.horizontal,
                           itemCount: _screenshots.length,
-                          itemBuilder: (context, index) {
-                            return Padding(
-                              padding: const EdgeInsets.only(right: 8, top: 8),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: Image.file(_screenshots[index], width: 80, height: 80, fit: BoxFit.cover),
-                              ),
-                            );
-                          },
+                          itemBuilder: (context, index) => Padding(
+                            padding: const EdgeInsets.only(right: 8, top: 8),
+                            child: ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.file(_screenshots[index], width: 80, height: 80, fit: BoxFit.cover)),
+                          ),
                         ),
                       ),
                     const SizedBox(height: 24),
-
-                    // App Name
-                    TextFormField(
-                      controller: _nameController,
-                      decoration: const InputDecoration(
-                        labelText: 'App Name',
-                        prefixIcon: Icon(Icons.app_shortcut),
-                      ),
-                      validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
-                    ),
+                    _buildField('App Name', _nameController, Icons.app_shortcut),
                     const SizedBox(height: 16),
-
-                    // Package Name
-                    TextFormField(
-                      controller: _packageNameController,
-                      decoration: const InputDecoration(
-                        labelText: 'Package Name (e.g., com.example.app)',
-                        prefixIcon: Icon(Icons.code),
-                      ),
-                      validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
-                    ),
+                    _buildField('Package Name (e.g., com.example.app)', _packageNameController, Icons.code),
                     const SizedBox(height: 16),
-
-                    // Category
                     DropdownButtonFormField<String>(
                       value: _selectedCategory,
-                      decoration: const InputDecoration(
-                        labelText: 'Category',
-                        prefixIcon: Icon(Icons.category),
-                      ),
-                      items: AppConstants.appCategories
-                          .where((c) => c != 'All')
-                          .map((category) => DropdownMenuItem(
-                                value: category,
-                                child: Text(category),
-                              ))
-                          .toList(),
-                      onChanged: (value) {
-                        if (value != null) {
-                          setState(() => _selectedCategory = value);
-                        }
-                      },
+                      dropdownColor: const Color(0xFF1A1A1A),
+                      style: const TextStyle(color: Colors.white),
+                      decoration: _inputDecoration('Category', Icons.category),
+                      items: AppConstants.appCategories.where((c) => c != 'All').map((category) => DropdownMenuItem(value: category, child: Text(category, style: const TextStyle(color: Colors.white)))).toList(),
+                      onChanged: (value) => setState(() => _selectedCategory = value!),
                     ),
                     const SizedBox(height: 16),
-
-                    // Description
                     TextFormField(
                       controller: _descriptionController,
-                      decoration: const InputDecoration(
-                        labelText: 'Description',
-                        prefixIcon: Icon(Icons.description),
-                        alignLabelWithHint: true,
-                      ),
+                      style: const TextStyle(color: Colors.white),
+                      decoration: _inputDecoration('Description', Icons.description),
                       maxLines: 5,
                       validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
                     ),
                     const SizedBox(height: 16),
-
-                    // Version
-                    TextFormField(
-                      controller: _versionController,
-                      decoration: const InputDecoration(
-                        labelText: 'Version',
-                        prefixIcon: Icon(Icons.numbers),
-                      ),
-                      validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
-                    ),
+                    _buildField('Version', _versionController, Icons.numbers),
                     const SizedBox(height: 16),
-
-                    // Min Android Version
-                    TextFormField(
-                      controller: _minAndroidController,
-                      decoration: const InputDecoration(
-                        labelText: 'Minimum Android Version',
-                        prefixIcon: Icon(Icons.android),
-                      ),
-                      validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
-                    ),
+                    _buildField('Minimum Android Version', _minAndroidController, Icons.android),
                     const SizedBox(height: 16),
-
-                    // Tags
                     TextFormField(
                       controller: _tagsController,
-                      decoration: const InputDecoration(
-                        labelText: 'Tags (comma separated)',
-                        prefixIcon: Icon(Icons.tag),
-                        hintText: 'game, action, free',
-                      ),
+                      style: const TextStyle(color: Colors.white),
+                      decoration: _inputDecoration('Tags (comma separated)', Icons.tag, hint: 'game, action, free'),
                     ),
                     const SizedBox(height: 32),
                   ],
                 ),
               ),
             ),
+    );
+  }
+
+  Widget _buildField(String label, TextEditingController controller, IconData icon) {
+    return TextFormField(
+      controller: controller,
+      style: const TextStyle(color: Colors.white),
+      decoration: _inputDecoration(label, icon),
+      validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+    );
+  }
+
+  InputDecoration _inputDecoration(String label, IconData icon, {String? hint}) {
+    return InputDecoration(
+      labelText: label,
+      hintText: hint,
+      labelStyle: const TextStyle(color: Colors.white70),
+      hintStyle: const TextStyle(color: Colors.white38),
+      prefixIcon: Icon(icon, color: Colors.white70),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.white24)),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.white24)),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.white)),
     );
   }
 }
@@ -411,14 +351,7 @@ class _FilePickerCard extends StatelessWidget {
   final VoidCallback onTap;
   final Widget? preview;
 
-  const _FilePickerCard({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    required this.isSelected,
-    required this.onTap,
-    this.preview,
-  });
+  const _FilePickerCard({required this.title, required this.subtitle, required this.icon, required this.isSelected, required this.onTap, this.preview});
 
   @override
   Widget build(BuildContext context) {
@@ -428,51 +361,31 @@ class _FilePickerCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.success.withOpacity(0.1) : AppColors.primary.withOpacity(0.05),
+          color: isSelected ? const Color(0xFF1A1A1A) : const Color(0xFF111111),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isSelected ? AppColors.success : AppColors.primary.withOpacity(0.2),
-            width: 2,
-          ),
+          border: Border.all(color: isSelected ? Colors.white : Colors.white24, width: 2),
         ),
         child: Row(
           children: [
             Container(
               width: 48,
               height: 48,
-              decoration: BoxDecoration(
-                color: isSelected ? AppColors.success : AppColors.primary,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(icon, color: Colors.white),
+              decoration: BoxDecoration(color: isSelected ? Colors.white : const Color(0xFF1A1A1A), borderRadius: BorderRadius.circular(12)),
+              child: Icon(icon, color: isSelected ? Colors.black : Colors.white),
             ),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    title,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                  ),
+                  Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.white)),
                   const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      color: AppColors.textMuted,
-                      fontSize: 13,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                  Text(subtitle, style: const TextStyle(color: Colors.white70, fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
                 ],
               ),
             ),
             if (preview != null) preview!,
-            if (isSelected)
-              const Icon(Icons.check_circle, color: AppColors.success)
-            else
-              const Icon(Icons.add_circle_outline, color: AppColors.primary),
+            Icon(isSelected ? Icons.check_circle : Icons.add_circle_outline, color: isSelected ? Colors.white : Colors.white70),
           ],
         ),
       ),

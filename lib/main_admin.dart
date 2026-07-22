@@ -1,20 +1,39 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
 import 'core/theme/app_theme.dart';
 import 'core/services/firebase_options.dart';
+import 'core/services/auth_service.dart';
+import 'data/repositories/app_repository.dart';
 import 'presentation/providers/theme_provider.dart';
 import 'presentation/providers/locale_provider.dart';
+import 'presentation/bloc/auth_bloc.dart';
 import 'presentation/screens/admin/admin_dashboard_screen.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:devstore/l10n/app_localizations.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  runApp(const AdminPanelApp());
+  
+  final authService = AuthService();
+  final appRepository = AppRepository();
+  
+  runApp(
+    MultiRepositoryProvider(
+      providers: [
+        RepositoryProvider.value(value: authService),
+        RepositoryProvider.value(value: appRepository),
+      ],
+      child: BlocProvider(
+        create: (context) => AuthBloc(authService)..add(AppStarted()),
+        child: const AdminPanelApp(),
+      ),
+    ),
+  );
 }
 
 class AdminPanelApp extends StatelessWidget {

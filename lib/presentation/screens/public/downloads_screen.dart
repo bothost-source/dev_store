@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:devstore/l10n/app_localizations.dart';
 
 class DownloadsScreen extends StatelessWidget {
   const DownloadsScreen({super.key});
@@ -9,16 +9,32 @@ class DownloadsScreen extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      appBar: AppBar(title: Text('My Downloads')),
-      body: Center(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+        title: const Text('My Downloads', style: TextStyle(color: Colors.white)),
+        elevation: 0,
+      ),
+      body: const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.download_done, size: 64, color: Colors.grey),
+            Icon(Icons.download_done, size: 64, color: Colors.white70),
             SizedBox(height: 16),
-            Text('No downloads yet', style: Theme.of(context).textTheme.titleLarge),
+            Text(
+              'No downloads yet',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
             SizedBox(height: 8),
-            Text('Apps you download will appear here', style: TextStyle(color: Colors.grey)),
+            Text(
+              'Apps you download will appear here',
+              style: TextStyle(color: Colors.white70),
+            ),
           ],
         ),
       ),

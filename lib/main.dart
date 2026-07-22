@@ -19,7 +19,6 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
   
-  // Create repositories once
   final authService = AuthService();
   final appRepository = AppRepository();
   

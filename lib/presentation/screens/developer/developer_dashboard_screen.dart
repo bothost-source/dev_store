@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../../core/theme/app_colors.dart';
-import '../../../core/utils/helpers.dart';
 import '../../../data/models/app_model.dart';
+import '../../../data/repositories/app_repository.dart';
 import '../../bloc/app_bloc.dart';
 import '../../bloc/auth_bloc.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/shimmer_loading.dart';
 import '../public/app_detail_screen.dart';
 import 'upload_app_screen.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:devstore/l10n/app_localizations.dart';
 
 class DeveloperDashboardScreen extends StatelessWidget {
   const DeveloperDashboardScreen({super.key});
@@ -21,11 +20,14 @@ class DeveloperDashboardScreen extends StatelessWidget {
     final developerId = authState is Authenticated ? authState.user.uid : '';
 
     return Scaffold(
+      backgroundColor: Colors.black,
       appBar: AppBar(
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
         title: Text(l10n.developer),
         actions: [
           IconButton(
-            icon: const Icon(Icons.add),
+            icon: const Icon(Icons.add, color: Colors.white),
             onPressed: () {
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const UploadAppScreen()),
@@ -35,7 +37,7 @@ class DeveloperDashboardScreen extends StatelessWidget {
         ],
       ),
       body: BlocProvider(
-        create: (_) => AppBloc(context.read())..add(LoadDeveloperApps(developerId)),
+        create: (_) => AppBloc(context.read<AppRepository>())..add(LoadDeveloperApps(developerId)),
         child: CustomScrollView(
           slivers: [
             // Stats Cards
@@ -56,21 +58,18 @@ class DeveloperDashboardScreen extends StatelessWidget {
                             title: 'My Apps',
                             value: apps.length.toString(),
                             icon: Icons.apps,
-                            color: AppColors.primary,
                           ),
                           const SizedBox(width: 12),
                           _StatCard(
                             title: 'Downloads',
-                            value: Helpers.formatNumber(totalDownloads),
+                            value: totalDownloads.toString(),
                             icon: Icons.download,
-                            color: AppColors.secondary,
                           ),
                           const SizedBox(width: 12),
                           _StatCard(
                             title: 'Pending',
                             value: pendingApps.toString(),
                             icon: Icons.hourglass_empty,
-                            color: AppColors.warning,
                           ),
                         ],
                       );
@@ -95,8 +94,10 @@ class DeveloperDashboardScreen extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
                 child: Text(
                   l10n.myApps,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  style: const TextStyle(
+                    fontSize: 20,
                     fontWeight: FontWeight.bold,
+                    color: Colors.white,
                   ),
                 ),
               ),
@@ -108,6 +109,16 @@ class DeveloperDashboardScreen extends StatelessWidget {
                 if (state is AppLoading) {
                   return const SliverToBoxAdapter(child: ShimmerAppList());
                 }
+                if (state is AppError) {
+                  return SliverToBoxAdapter(
+                    child: Center(
+                      child: Text(
+                        'Error: ${state.message}',
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  );
+                }
                 if (state is AppsLoaded) {
                   if (state.apps.isEmpty) {
                     return SliverToBoxAdapter(
@@ -116,16 +127,20 @@ class DeveloperDashboardScreen extends StatelessWidget {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             const SizedBox(height: 40),
-                            const Icon(Icons.cloud_upload_outlined, size: 64, color: AppColors.textMuted),
+                            const Icon(Icons.cloud_upload_outlined, size: 64, color: Colors.white70),
                             const SizedBox(height: 16),
-                            Text(
+                            const Text(
                               'No apps yet',
-                              style: Theme.of(context).textTheme.titleLarge,
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
                             ),
                             const SizedBox(height: 8),
-                            Text(
+                            const Text(
                               'Upload your first app to get started',
-                              style: TextStyle(color: AppColors.textMuted),
+                              style: TextStyle(color: Colors.white70),
                             ),
                             const SizedBox(height: 24),
                             ElevatedButton.icon(
@@ -134,8 +149,12 @@ class DeveloperDashboardScreen extends StatelessWidget {
                                   MaterialPageRoute(builder: (_) => const UploadAppScreen()),
                                 );
                               },
-                              icon: const Icon(Icons.add),
-                              label: Text(l10n.uploadApp),
+                              icon: const Icon(Icons.add, color: Colors.black),
+                              label: Text(l10n.uploadApp, style: const TextStyle(color: Colors.black)),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                foregroundColor: Colors.black,
+                              ),
                             ),
                           ],
                         ),
@@ -169,13 +188,11 @@ class _StatCard extends StatelessWidget {
   final String title;
   final String value;
   final IconData icon;
-  final Color color;
 
   const _StatCard({
     required this.title,
     required this.value,
     required this.icon,
-    required this.color,
   });
 
   @override
@@ -184,28 +201,29 @@ class _StatCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: const Color(0xFF1A1A1A),
           borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.white24),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, color: color, size: 24),
+            const Icon(Icons.apps, color: Colors.white, size: 24),
             const SizedBox(height: 12),
             Text(
               value,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-                color: color,
+                color: Colors.white,
               ),
             ),
             const SizedBox(height: 4),
             Text(
               title,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 12,
-                color: color.withOpacity(0.8),
+                color: Colors.white70,
               ),
             ),
           ],
@@ -223,8 +241,9 @@ class _StatCardSkeleton extends StatelessWidget {
     return Container(
       height: 100,
       decoration: BoxDecoration(
-        color: Colors.grey[300],
+        color: const Color(0xFF111111),
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white12),
       ),
     );
   }
@@ -237,34 +256,13 @@ class _DeveloperAppCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Color statusColor;
-    IconData statusIcon;
-    String statusText;
-
-    switch (app.status) {
-      case 'approved':
-        statusColor = AppColors.success;
-        statusIcon = Icons.check_circle;
-        statusText = 'Approved';
-        break;
-      case 'pending':
-        statusColor = AppColors.warning;
-        statusIcon = Icons.hourglass_empty;
-        statusText = 'Pending Approval';
-        break;
-      case 'rejected':
-        statusColor = AppColors.error;
-        statusIcon = Icons.cancel;
-        statusText = 'Rejected';
-        break;
-      default:
-        statusColor = Colors.grey;
-        statusIcon = Icons.help;
-        statusText = 'Unknown';
-    }
-
     return Card(
+      color: const Color(0xFF111111),
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: Colors.white24),
+      ),
       child: InkWell(
         onTap: () {
           Navigator.of(context).push(
@@ -281,14 +279,15 @@ class _DeveloperAppCard extends StatelessWidget {
                 height: 56,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
-                  color: AppColors.primary.withOpacity(0.1),
+                  color: const Color(0xFF1A1A1A),
+                  border: Border.all(color: Colors.white24),
                 ),
                 child: app.iconUrl.isNotEmpty
                     ? ClipRRect(
                         borderRadius: BorderRadius.circular(12),
                         child: Image.network(app.iconUrl, fit: BoxFit.cover),
                       )
-                    : const Icon(Icons.android, color: AppColors.primary),
+                    : const Icon(Icons.android, color: Colors.white),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -297,54 +296,36 @@ class _DeveloperAppCard extends StatelessWidget {
                   children: [
                     Text(
                       app.name,
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: Colors.white,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       'v${app.version}',
-                      style: TextStyle(color: AppColors.textMuted, fontSize: 13),
+                      style: const TextStyle(color: Colors.white70, fontSize: 13),
                     ),
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        Icon(statusIcon, size: 14, color: statusColor),
+                        Icon(
+                          app.status == 'approved' ? Icons.check_circle :
+                          app.status == 'pending' ? Icons.hourglass_empty :
+                          Icons.cancel,
+                          size: 14,
+                          color: Colors.white70,
+                        ),
                         const SizedBox(width: 4),
                         Text(
-                          statusText,
-                          style: TextStyle(
-                            color: statusColor,
+                          app.status.toUpperCase(),
+                          style: const TextStyle(
+                            color: Colors.white70,
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
-                        if (app.status == 'rejected' && app.rejectionReason != null) ...[
-                          const SizedBox(width: 8),
-                          GestureDetector(
-                            onTap: () {
-                              showDialog(
-                                context: context,
-                                builder: (_) => AlertDialog(
-                                  title: const Text('Rejection Reason'),
-                                  content: Text(app.rejectionReason!),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.pop(context),
-                                      child: const Text('OK'),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                            child: const Text(
-                              'View reason',
-                              style: TextStyle(
-                                color: AppColors.primary,
-                                fontSize: 12,
-                                decoration: TextDecoration.underline,
-                              ),
-                            ),
-                          ),
-                        ],
                       ],
                     ),
                   ],
@@ -354,12 +335,15 @@ class _DeveloperAppCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    Helpers.formatNumber(app.downloadCount),
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    app.downloadCount.toString(),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
-                  Text(
+                  const Text(
                     'downloads',
-                    style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+                    style: TextStyle(fontSize: 11, color: Colors.white70),
                   ),
                 ],
               ),

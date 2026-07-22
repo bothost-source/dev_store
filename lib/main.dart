@@ -4,18 +4,25 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'core/theme/app_theme.dart';
 import 'core/services/firebase_options.dart';
+import 'core/services/auth_service.dart';
 import 'presentation/providers/theme_provider.dart';
 import 'presentation/providers/locale_provider.dart';
+import 'presentation/bloc/auth_bloc.dart';
 import 'package:provider/provider.dart'; 
 import 'presentation/screens/splash_screen.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:devstore/l10n/app_localizations.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  runApp(const DevStoreApp());
+  runApp(
+    BlocProvider(
+      create: (context) => AuthBloc(AuthService())..add(AppStarted()),
+      child: const DevStoreApp(),
+    ),
+  );
 }
 
 class DevStoreApp extends StatelessWidget {

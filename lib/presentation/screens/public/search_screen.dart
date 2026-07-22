@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../../core/theme/app_colors.dart';
 import '../../../data/models/app_model.dart';
+import '../../../data/repositories/app_repository.dart';
 import '../../bloc/app_bloc.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/shimmer_loading.dart';
 import 'app_detail_screen.dart';
 import 'top_charts_screen.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:devstore/l10n/app_localizations.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -37,85 +37,120 @@ class _SearchScreenState extends State<SearchScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
 
-    return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: TextField(
-                controller: _searchController,
-                onChanged: _onSearchChanged,
-                decoration: InputDecoration(
-                  hintText: l10n.search,
-                  prefixIcon: const Icon(Icons.search),
-                  suffixIcon: _searchQuery.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.clear),
-                          onPressed: () {
-                            _searchController.clear();
-                            setState(() => _searchQuery = '');
-                          },
-                        )
-                      : null,
+    return BlocProvider(
+      create: (context) => AppBloc(context.read<AppRepository>()),
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        body: SafeArea(
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: _onSearchChanged,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    hintText: l10n.search,
+                    hintStyle: const TextStyle(color: Colors.white70),
+                    prefixIcon: const Icon(Icons.search, color: Colors.white70),
+                    suffixIcon: _searchQuery.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear, color: Colors.white70),
+                            onPressed: () {
+                              _searchController.clear();
+                              setState(() => _searchQuery = '');
+                            },
+                          )
+                        : null,
+                    filled: true,
+                    fillColor: const Color(0xFF1A1A1A),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Colors.white24),
+                    ),
+                  ),
                 ),
               ),
-            ),
-            if (_searchQuery.isEmpty) ...[
-              ListTile(
-                leading: const Icon(Icons.trending_up, color: AppColors.primary),
-                title: const Text('Top Charts'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const TopChartsScreen()),
-                  );
-                },
-              ),
-              const Divider(),
-            ],
-            Expanded(
-              child: _searchQuery.isEmpty
-                  ? const _RecentSearches()
-                  : BlocBuilder<AppBloc, AppState>(
-                      builder: (context, state) {
-                        if (state is AppLoading) {
-                          return const ShimmerAppList();
-                        }
-                        if (state is AppsLoaded) {
-                          if (state.apps.isEmpty) {
+              if (_searchQuery.isEmpty) ...[
+                ListTile(
+                  leading: const Icon(Icons.trending_up, color: Colors.white),
+                  title: const Text('Top Charts', style: TextStyle(color: Colors.white)),
+                  trailing: const Icon(Icons.chevron_right, color: Colors.white70),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const TopChartsScreen()),
+                    );
+                  },
+                ),
+                const Divider(color: Colors.white24),
+              ],
+              Expanded(
+                child: _searchQuery.isEmpty
+                    ? const _RecentSearches()
+                    : BlocBuilder<AppBloc, AppState>(
+                        builder: (context, state) {
+                          if (state is AppLoading) {
+                            return const ShimmerAppList();
+                          }
+                          if (state is AppError) {
                             return Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Icon(Icons.search_off, size: 64, color: AppColors.textMuted),
-                                  const SizedBox(height: 16),
-                                  Text(l10n.noAppsFound, style: Theme.of(context).textTheme.titleLarge),
-                                ],
+                              child: Text(
+                                'Error: ${state.message}',
+                                style: const TextStyle(color: Colors.white),
                               ),
                             );
                           }
-                          return ListView.builder(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            itemCount: state.apps.length,
-                            itemBuilder: (context, index) {
-                              final app = state.apps[index];
-                              return AppCard(
-                                app: app,
-                                onTap: () {
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute(builder: (_) => AppDetailScreen(app: app)),
-                                  );
-                                },
+                          if (state is AppsLoaded) {
+                            if (state.apps.isEmpty) {
+                              return Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(Icons.search_off, size: 64, color: Colors.white70),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      l10n.noAppsFound,
+                                      style: const TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               );
-                            },
-                          );
-                        }
-                        return const SizedBox.shrink();
-                      },
-                    ),
-            ),
-          ],
+                            }
+                            return ListView.builder(
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              itemCount: state.apps.length,
+                              itemBuilder: (context, index) {
+                                final app = state.apps[index];
+                                return AppCard(
+                                  app: app,
+                                  onTap: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(builder: (_) => AppDetailScreen(app: app)),
+                                    );
+                                  },
+                                );
+                              },
+                            );
+                          }
+                          return const SizedBox.shrink();
+                        },
+                      ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -131,9 +166,12 @@ class _RecentSearches extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.search, size: 64, color: AppColors.textMuted),
+          Icon(Icons.search, size: 64, color: Colors.white70),
           SizedBox(height: 16),
-          Text('Start typing to search apps', style: TextStyle(color: AppColors.textMuted)),
+          Text(
+            'Start typing to search apps',
+            style: TextStyle(color: Colors.white70),
+          ),
         ],
       ),
     );

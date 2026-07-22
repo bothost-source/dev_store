@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/repositories/user_repository.dart';
+import '../../bloc/auth_bloc.dart';
 import 'pending_approvals_screen.dart';
 import 'all_apps_screen.dart';
 import 'all_developers_screen.dart';
 import 'reports_screen.dart';
 import 'analytics_screen.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:devstore/l10n/app_localizations.dart';
 
 class AdminDashboardScreen extends StatelessWidget {
   const AdminDashboardScreen({super.key});
@@ -17,13 +18,25 @@ class AdminDashboardScreen extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
+      backgroundColor: Colors.black,
       appBar: AppBar(
-        title: Text(l10n.adminPanel),
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+        title: Text(l10n.adminPanel, style: const TextStyle(color: Colors.white)),
         automaticallyImplyLeading: false,
+        elevation: 0,
       ),
       body: FutureBuilder<Map<String, dynamic>>(
-        future: UserRepository().getAnalytics(),
+        future: context.read<UserRepository>().getAnalytics(),
         builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator(color: Colors.white));
+          }
+          if (snapshot.hasError) {
+            return Center(
+              child: Text('Error: ${snapshot.error}', style: const TextStyle(color: Colors.white)),
+            );
+          }
           final analytics = snapshot.data ?? {};
 
           return SingleChildScrollView(
@@ -31,7 +44,7 @@ class AdminDashboardScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Analytics Cards
+                // Analytics Cards WITH COLORS
                 GridView.count(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
@@ -73,10 +86,10 @@ class AdminDashboardScreen extends StatelessWidget {
 
                 const SizedBox(height: 24),
 
-                // Quick Actions
-                Text(
+                // Quick Actions WITH COLORS
+                const Text(
                   'Quick Actions',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
                 ),
                 const SizedBox(height: 12),
 
@@ -148,6 +161,7 @@ class _AnalyticsCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: color.withOpacity(0.1),
           borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: color.withOpacity(0.3)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -164,7 +178,7 @@ class _AnalyticsCard extends StatelessWidget {
                   ),
                   child: Icon(icon, color: color, size: 20),
                 ),
-                const Icon(Icons.arrow_forward_ios, size: 14, color: AppColors.textMuted),
+                const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.white70),
               ],
             ),
             Column(
@@ -172,19 +186,11 @@ class _AnalyticsCard extends StatelessWidget {
               children: [
                 Text(
                   value,
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: color,
-                  ),
+                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: color),
                 ),
                 Text(
                   title,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: color.withOpacity(0.8),
-                    fontWeight: FontWeight.w500,
-                  ),
+                  style: TextStyle(fontSize: 12, color: color.withOpacity(0.8), fontWeight: FontWeight.w500),
                 ),
               ],
             ),
@@ -213,7 +219,12 @@ class _ActionTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
+      color: const Color(0xFF111111),
       margin: const EdgeInsets.only(bottom: 8),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: Border.all(color: color.withOpacity(0.3)),
+      ),
       child: ListTile(
         leading: Container(
           padding: const EdgeInsets.all(10),
@@ -223,9 +234,9 @@ class _ActionTile extends StatelessWidget {
           ),
           child: Icon(icon, color: color),
         ),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Text(subtitle, style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
-        trailing: const Icon(Icons.chevron_right),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.white)),
+        subtitle: Text(subtitle, style: const TextStyle(fontSize: 12, color: Colors.white70)),
+        trailing: const Icon(Icons.chevron_right, color: Colors.white70),
         onTap: onTap,
       ),
     );

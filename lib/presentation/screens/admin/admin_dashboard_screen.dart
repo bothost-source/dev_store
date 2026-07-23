@@ -223,7 +223,7 @@ class _ActionTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: Border.all(color: color.withOpacity(0.3)),
+        side: BorderSide(color: color.withOpacity(0.3)),
       ),
       child: ListTile(
         leading: Container(

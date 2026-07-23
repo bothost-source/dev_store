@@ -28,8 +28,7 @@ class AppRepository {
   }) {
     Query query = _firestore
         .collection(AppConstants.appsCollection)
-        .where('status', isEqualTo: AppConstants.statusApproved)
-        .orderBy(sortBy, descending: descending);
+        .where('status', isEqualTo: AppConstants.statusApproved);
 
     if (category != null && category != 'All') {
       query = query.where('category', isEqualTo: category);
@@ -41,8 +40,30 @@ class AppRepository {
     }
 
     return query.limit(limit).snapshots().map((snapshot) {
-      return snapshot.docs.map((doc) => AppModel.fromFirestore(doc)).toList();
+      final apps = snapshot.docs.map((doc) => AppModel.fromFirestore(doc)).toList();
+      // Sort in Dart instead of Firestore
+      apps.sort((a, b) {
+        final aVal = _getSortValue(a, sortBy);
+        final bVal = _getSortValue(b, sortBy);
+        return descending ? bVal.compareTo(aVal) : aVal.compareTo(bVal);
+      });
+      return apps;
     });
+  }
+
+  dynamic _getSortValue(AppModel app, String sortBy) {
+    switch (sortBy) {
+      case 'createdAt':
+        return app.createdAt;
+      case 'approvedAt':
+        return app.approvedAt ?? DateTime(1970);
+      case 'downloadCount':
+        return app.downloadCount;
+      case 'averageRating':
+        return app.averageRating;
+      default:
+        return app.createdAt;
+    }
   }
 
   // Get featured apps
@@ -51,11 +72,12 @@ class AppRepository {
         .collection(AppConstants.appsCollection)
         .where('status', isEqualTo: AppConstants.statusApproved)
         .where('isFeatured', isEqualTo: true)
-        .orderBy('createdAt', descending: true)
         .limit(10)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.map((doc) => AppModel.fromFirestore(doc)).toList();
+      final apps = snapshot.docs.map((doc) => AppModel.fromFirestore(doc)).toList();
+      apps.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return apps;
     });
   }
 
@@ -64,11 +86,12 @@ class AppRepository {
     return _firestore
         .collection(AppConstants.appsCollection)
         .where('status', isEqualTo: AppConstants.statusApproved)
-        .orderBy('approvedAt', descending: true)
         .limit(20)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.map((doc) => AppModel.fromFirestore(doc)).toList();
+      final apps = snapshot.docs.map((doc) => AppModel.fromFirestore(doc)).toList();
+      apps.sort((a, b) => (b.approvedAt ?? DateTime(1970)).compareTo(a.approvedAt ?? DateTime(1970)));
+      return apps;
     });
   }
 
@@ -77,11 +100,12 @@ class AppRepository {
     return _firestore
         .collection(AppConstants.appsCollection)
         .where('status', isEqualTo: AppConstants.statusApproved)
-        .orderBy('downloadCount', descending: true)
         .limit(50)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.map((doc) => AppModel.fromFirestore(doc)).toList();
+      final apps = snapshot.docs.map((doc) => AppModel.fromFirestore(doc)).toList();
+      apps.sort((a, b) => b.downloadCount.compareTo(a.downloadCount));
+      return apps;
     });
   }
 
@@ -115,10 +139,11 @@ class AppRepository {
     return _firestore
         .collection(AppConstants.appsCollection)
         .where('developerId', isEqualTo: developerId)
-        .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.map((doc) => AppModel.fromFirestore(doc)).toList();
+      final apps = snapshot.docs.map((doc) => AppModel.fromFirestore(doc)).toList();
+      apps.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return apps;
     });
   }
 
@@ -127,10 +152,11 @@ class AppRepository {
     return _firestore
         .collection(AppConstants.appsCollection)
         .where('status', isEqualTo: AppConstants.statusPending)
-        .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.map((doc) => AppModel.fromFirestore(doc)).toList();
+      final apps = snapshot.docs.map((doc) => AppModel.fromFirestore(doc)).toList();
+      apps.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return apps;
     });
   }
 
@@ -231,10 +257,11 @@ class AppRepository {
     return _firestore
         .collection(AppConstants.reviewsCollection)
         .where('appId', isEqualTo: appId)
-        .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.map((doc) => ReviewModel.fromFirestore(doc)).toList();
+      final reviews = snapshot.docs.map((doc) => ReviewModel.fromFirestore(doc)).toList();
+      reviews.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return reviews;
     });
   }
 

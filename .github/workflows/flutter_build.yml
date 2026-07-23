@@ -28,7 +28,6 @@ jobs:
           flutter-version: '3.22.0'
           channel: 'stable'
 
-      # ===== FIX: Create l10n.yaml to output to lib/l10n/ =====
       - name: Configure l10n
         run: |
           cat > l10n.yaml << 'EOF'
@@ -46,7 +45,6 @@ jobs:
       - name: Generate localizations
         run: flutter gen-l10n
 
-      # ===== FIX: Update all imports from flutter_gen to devstore/l10n =====
       - name: Fix imports
         run: |
           find lib -name "*.dart" -exec sed -i 's|package:flutter_gen/gen_l10n/app_localizations.dart|package:devstore/l10n/app_localizations.dart|g' {} +
@@ -161,6 +159,17 @@ jobs:
 
       - name: Get dependencies
         run: flutter pub get
+
+      - name: Configure l10n
+        run: |
+          cat > l10n.yaml << 'EOF'
+          arb-dir: lib/l10n
+          template-arb-file: app_en.arb
+          output-localization-file: app_localizations.dart
+          output-dir: lib/l10n
+          synthetic-package: false
+          output-class: AppLocalizations
+          EOF
 
       - name: Generate localizations
         run: flutter gen-l10n

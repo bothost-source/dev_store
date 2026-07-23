@@ -3,7 +3,8 @@ import 'package:equatable/equatable.dart';
 import '../../data/models/app_model.dart';
 import '../../data/repositories/app_repository.dart';
 
-// Events
+// ─── EVENTS ───────────────────────────────────
+
 abstract class AppEvent extends Equatable {
   const AppEvent();
   @override
@@ -15,51 +16,88 @@ class LoadApps extends AppEvent {
   final String? searchQuery;
   final String sortBy;
   const LoadApps({this.category, this.searchQuery, this.sortBy = 'createdAt'});
+
+  @override
+  List<Object?> get props => [category, searchQuery, sortBy];
 }
 
-class LoadFeaturedApps extends AppEvent {}
-class LoadNewReleases extends AppEvent {}
-class LoadTopCharts extends AppEvent {}
-class LoadPendingApps extends AppEvent {}  // ADDED
+class LoadFeaturedApps extends AppEvent {
+  const LoadFeaturedApps();
+}
+
+class LoadNewReleases extends AppEvent {
+  const LoadNewReleases();
+}
+
+class LoadTopCharts extends AppEvent {
+  const LoadTopCharts();
+}
+
+class LoadPendingApps extends AppEvent {
+  const LoadPendingApps();
+}
+
 class LoadAppDetail extends AppEvent {
   final String appId;
   const LoadAppDetail(this.appId);
+
+  @override
+  List<Object?> get props => [appId];
 }
 
 class LoadSimilarApps extends AppEvent {
   final String appId;
   final String category;
   const LoadSimilarApps(this.appId, this.category);
+
+  @override
+  List<Object?> get props => [appId, category];
 }
 
 class LoadDeveloperApps extends AppEvent {
   final String developerId;
   const LoadDeveloperApps(this.developerId);
+
+  @override
+  List<Object?> get props => [developerId];
 }
 
 class ApproveAppEvent extends AppEvent {
   final String appId;
   const ApproveAppEvent(this.appId);
+
+  @override
+  List<Object?> get props => [appId];
 }
 
 class RejectAppEvent extends AppEvent {
   final String appId;
   final String reason;
   const RejectAppEvent(this.appId, this.reason);
+
+  @override
+  List<Object?> get props => [appId, reason];
 }
 
 class ToggleFeaturedEvent extends AppEvent {
   final String appId;
   final bool isFeatured;
   const ToggleFeaturedEvent(this.appId, this.isFeatured);
+
+  @override
+  List<Object?> get props => [appId, isFeatured];
 }
 
 class DeleteAppEvent extends AppEvent {
   final String appId;
   const DeleteAppEvent(this.appId);
+
+  @override
+  List<Object?> get props => [appId];
 }
 
-// States
+// ─── STATES ───────────────────────────────────
+
 abstract class AppState extends Equatable {
   const AppState();
   @override
@@ -67,10 +105,13 @@ abstract class AppState extends Equatable {
 }
 
 class AppInitial extends AppState {}
+
 class AppLoading extends AppState {}
+
 class AppsLoaded extends AppState {
   final List<AppModel> apps;
   const AppsLoaded(this.apps);
+
   @override
   List<Object?> get props => [apps];
 }
@@ -79,23 +120,30 @@ class AppDetailLoaded extends AppState {
   final AppModel app;
   final List<AppModel> similarApps;
   const AppDetailLoaded(this.app, {this.similarApps = const []});
+
   @override
   List<Object?> get props => [app, similarApps];
 }
 
 class AppOperationSuccess extends AppState {
   final String message;
-  const AppOperationSuccess(this.message);
+  final List<AppModel>? apps; // Optional refreshed list
+  const AppOperationSuccess(this.message, {this.apps});
+
+  @override
+  List<Object?> get props => [message, apps];
 }
 
 class AppError extends AppState {
   final String message;
   const AppError(this.message);
+
   @override
   List<Object?> get props => [message];
 }
 
-// BLoC
+// ─── BLOC ─────────────────────────────────────
+
 class AppBloc extends Bloc<AppEvent, AppState> {
   final AppRepository _repository;
 
@@ -104,7 +152,7 @@ class AppBloc extends Bloc<AppEvent, AppState> {
     on<LoadFeaturedApps>(_onLoadFeaturedApps);
     on<LoadNewReleases>(_onLoadNewReleases);
     on<LoadTopCharts>(_onLoadTopCharts);
-    on<LoadPendingApps>(_onLoadPendingApps);  // ADDED
+    on<LoadPendingApps>(_onLoadPendingApps);
     on<LoadAppDetail>(_onLoadAppDetail);
     on<LoadSimilarApps>(_onLoadSimilarApps);
     on<LoadDeveloperApps>(_onLoadDeveloperApps);
@@ -114,65 +162,67 @@ class AppBloc extends Bloc<AppEvent, AppState> {
     on<DeleteAppEvent>(_onDeleteApp);
   }
 
+  // ─── STREAM-BASED READ OPERATIONS ───────────
+
   Future<void> _onLoadApps(LoadApps event, Emitter<AppState> emit) async {
     emit(AppLoading());
-    try {
-      await for (final apps in _repository.getApprovedApps(
+    await emit.forEach(
+      _repository.getApprovedApps(
         category: event.category,
         searchQuery: event.searchQuery,
         sortBy: event.sortBy,
-      )) {
-        emit(AppsLoaded(apps));
-      }
-    } catch (e) {
-      emit(AppError(e.toString()));
-    }
+      ),
+      onData: (apps) => AppsLoaded(apps),
+      onError: (error, stackTrace) => AppError(error.toString()),
+    );
   }
 
   Future<void> _onLoadFeaturedApps(LoadFeaturedApps event, Emitter<AppState> emit) async {
     emit(AppLoading());
-    try {
-      await for (final apps in _repository.getFeaturedApps()) {
-        emit(AppsLoaded(apps));
-      }
-    } catch (e) {
-      emit(AppError(e.toString()));
-    }
+    await emit.forEach(
+      _repository.getFeaturedApps(),
+      onData: (apps) => AppsLoaded(apps),
+      onError: (error, stackTrace) => AppError(error.toString()),
+    );
   }
 
   Future<void> _onLoadNewReleases(LoadNewReleases event, Emitter<AppState> emit) async {
     emit(AppLoading());
-    try {
-      await for (final apps in _repository.getNewReleases()) {
-        emit(AppsLoaded(apps));
-      }
-    } catch (e) {
-      emit(AppError(e.toString()));
-    }
+    await emit.forEach(
+      _repository.getNewReleases(),
+      onData: (apps) => AppsLoaded(apps),
+      onError: (error, stackTrace) => AppError(error.toString()),
+    );
   }
 
   Future<void> _onLoadTopCharts(LoadTopCharts event, Emitter<AppState> emit) async {
     emit(AppLoading());
-    try {
-      await for (final apps in _repository.getTopCharts()) {
-        emit(AppsLoaded(apps));
-      }
-    } catch (e) {
-      emit(AppError(e.toString()));
-    }
+    await emit.forEach(
+      _repository.getTopCharts(),
+      onData: (apps) => AppsLoaded(apps),
+      onError: (error, stackTrace) => AppError(error.toString()),
+    );
   }
 
-  // ADDED
   Future<void> _onLoadPendingApps(LoadPendingApps event, Emitter<AppState> emit) async {
     emit(AppLoading());
-    try {
-      await for (final apps in _repository.getPendingApps()) {
-        emit(AppsLoaded(apps));
-      }
-    } catch (e) {
-      emit(AppError(e.toString()));
-    }
+    await emit.forEach(
+      _repository.getPendingApps(),
+      onData: (apps) => AppsLoaded(apps),
+      onError: (error, stackTrace) => AppError(error.toString()),
+    );
   }
+
+  Future<void> _onLoadDeveloperApps(LoadDeveloperApps event, Emitter<AppState> emit) async {
+    emit(AppLoading());
+    await emit.forEach(
+      _repository.getDeveloperApps(event.developerId),
+      onData: (apps) => AppsLoaded(apps),
+      onError: (error, stackTrace) => AppError(error.toString()),
+    );
+  }
+
+  // ─── FUTURE-BASED READ OPERATIONS ───────────
 
   Future<void> _onLoadAppDetail(LoadAppDetail event, Emitter<AppState> emit) async {
     emit(AppLoading());
@@ -190,26 +240,19 @@ class AppBloc extends Bloc<AppEvent, AppState> {
   }
 
   Future<void> _onLoadSimilarApps(LoadSimilarApps event, Emitter<AppState> emit) async {
-    try {
-      final apps = await _repository.getSimilarApps(event.appId, event.category);
-      // This would be handled differently in real implementation
-    } catch (e) {
-      emit(AppError(e.toString()));
-    }
-  }
-
-  Future<void> _onLoadDeveloperApps(LoadDeveloperApps event, Emitter<AppState> emit) async {
     emit(AppLoading());
     try {
-      await for (final apps in _repository.getDeveloperApps(event.developerId)) {
-        emit(AppsLoaded(apps));
-      }
+      final apps = await _repository.getSimilarApps(event.appId, event.category);
+      emit(AppsLoaded(apps));
     } catch (e) {
       emit(AppError(e.toString()));
     }
   }
 
+  // ─── WRITE OPERATIONS ───────────────────────
+
   Future<void> _onApproveApp(ApproveAppEvent event, Emitter<AppState> emit) async {
+    emit(AppLoading());
     try {
       await _repository.approveApp(event.appId);
       emit(const AppOperationSuccess('App approved successfully'));
@@ -219,6 +262,7 @@ class AppBloc extends Bloc<AppEvent, AppState> {
   }
 
   Future<void> _onRejectApp(RejectAppEvent event, Emitter<AppState> emit) async {
+    emit(AppLoading());
     try {
       await _repository.rejectApp(event.appId, event.reason);
       emit(const AppOperationSuccess('App rejected'));
@@ -228,6 +272,7 @@ class AppBloc extends Bloc<AppEvent, AppState> {
   }
 
   Future<void> _onToggleFeatured(ToggleFeaturedEvent event, Emitter<AppState> emit) async {
+    emit(AppLoading());
     try {
       await _repository.toggleFeatured(event.appId, event.isFeatured);
       emit(const AppOperationSuccess('Featured status updated'));
@@ -237,6 +282,7 @@ class AppBloc extends Bloc<AppEvent, AppState> {
   }
 
   Future<void> _onDeleteApp(DeleteAppEvent event, Emitter<AppState> emit) async {
+    emit(AppLoading());
     try {
       await _repository.deleteApp(event.appId);
       emit(const AppOperationSuccess('App deleted'));

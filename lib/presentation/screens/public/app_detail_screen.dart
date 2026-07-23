@@ -10,7 +10,7 @@ import '../../bloc/app_bloc.dart';
 import '../../bloc/download_bloc.dart';
 import '../../widgets/review_card.dart';
 import 'similar_apps_section.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:devstore/l10n/app_localizations.dart';
 
 class AppDetailScreen extends StatefulWidget {
   final AppModel app;
@@ -59,7 +59,16 @@ class _AppDetailScreenState extends State<AppDetailScreen> {
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(24),
                         child: app.iconUrl.isNotEmpty
-                            ? Image.network(app.iconUrl, fit: BoxFit.cover)
+                            ? Image.network(
+                                app.iconUrl,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    color: AppColors.primary,
+                                    child: const Icon(Icons.android, size: 50, color: Colors.white),
+                                  );
+                                },
+                              )
                             : Container(
                                 color: AppColors.primary,
                                 child: const Icon(Icons.android, size: 50, color: Colors.white),
@@ -189,6 +198,11 @@ class _AppDetailScreenState extends State<AppDetailScreen> {
                                 },
                                 icon: const Icon(Icons.install_mobile),
                                 label: Text(l10n.install),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.success,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                ),
                               );
                             }
                             return ElevatedButton.icon(
@@ -201,6 +215,11 @@ class _AppDetailScreenState extends State<AppDetailScreen> {
                               },
                               icon: const Icon(Icons.download),
                               label: Text(l10n.install),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                              ),
                             );
                           },
                         ),
@@ -240,7 +259,16 @@ class _AppDetailScreenState extends State<AppDetailScreen> {
                           ),
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(16),
-                            child: Image.network(url, fit: BoxFit.cover),
+                            child: Image.network(
+                              url,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  color: Colors.grey[300],
+                                  child: const Icon(Icons.image_not_supported, color: Colors.grey),
+                                );
+                              },
+                            ),
                           ),
                         );
                       }).toList(),

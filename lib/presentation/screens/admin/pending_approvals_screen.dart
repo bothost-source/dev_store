@@ -16,7 +16,7 @@ class PendingApprovalsScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: Text(l10n.pendingApprovals)),
       body: BlocProvider(
-        create: (_) => AppBloc(context.read())..add(const LoadApps()),
+        create: (_) => AppBloc(context.read())..add(const LoadPendingApps()),
         child: BlocConsumer<AppBloc, AppState>(
           listener: (context, state) {
             if (state is AppOperationSuccess) {

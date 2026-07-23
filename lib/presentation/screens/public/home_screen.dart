@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../data/models/app_model.dart';
 import '../../../data/repositories/app_repository.dart';
+import '../../../core/constants/app_constants.dart';
 import '../../bloc/app_bloc.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/section_header.dart';
@@ -17,10 +18,10 @@ class HomeScreen extends StatelessWidget {
     return MultiBlocProvider(
       providers: [
         BlocProvider(
-          create: (context) => AppBloc(context.read<AppRepository>())..add(const LoadFeaturedApps()),
+          create: (context) => AppBloc(context.read<AppRepository>())..add(LoadFeaturedApps()),
         ),
         BlocProvider(
-          create: (context) => AppBloc(context.read<AppRepository>())..add(const LoadNewReleases()),
+          create: (context) => AppBloc(context.read<AppRepository>())..add(LoadNewReleases()),
         ),
       ],
       child: Scaffold(

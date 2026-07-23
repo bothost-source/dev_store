@@ -4,7 +4,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../data/models/app_model.dart';
 import '../../bloc/app_bloc.dart';
 import '../../widgets/shimmer_loading.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:devstore/l10n/app_localizations.dart';
 
 class PendingApprovalsScreen extends StatelessWidget {
   const PendingApprovalsScreen({super.key});
@@ -33,8 +33,31 @@ class PendingApprovalsScreen extends StatelessWidget {
             if (state is AppLoading) {
               return const ShimmerAppList();
             }
+            if (state is AppError) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Error: ${state.message}',
+                      style: const TextStyle(color: Colors.white, fontSize: 16),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton(
+                      onPressed: () {
+                        context.read<AppBloc>().add(LoadPendingApps());
+                      },
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
+              );
+            }
             if (state is AppsLoaded) {
-              final pendingApps = state.apps.where((a) => a.status == 'pending').toList();
+              final pendingApps = state.apps.where((a) => a.status == 'pending' || a.status == 'PENDING').toList();
 
               if (pendingApps.isEmpty) {
                 return Center(
@@ -60,7 +83,9 @@ class PendingApprovalsScreen extends StatelessWidget {
                 },
               );
             }
-            return const SizedBox.shrink();
+            return const Center(
+              child: CircularProgressIndicator(),
+            );
           },
         ),
       ),

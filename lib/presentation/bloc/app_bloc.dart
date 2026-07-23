@@ -20,6 +20,7 @@ class LoadApps extends AppEvent {
 class LoadFeaturedApps extends AppEvent {}
 class LoadNewReleases extends AppEvent {}
 class LoadTopCharts extends AppEvent {}
+class LoadPendingApps extends AppEvent {}  // ADDED
 class LoadAppDetail extends AppEvent {
   final String appId;
   const LoadAppDetail(this.appId);
@@ -103,6 +104,7 @@ class AppBloc extends Bloc<AppEvent, AppState> {
     on<LoadFeaturedApps>(_onLoadFeaturedApps);
     on<LoadNewReleases>(_onLoadNewReleases);
     on<LoadTopCharts>(_onLoadTopCharts);
+    on<LoadPendingApps>(_onLoadPendingApps);  // ADDED
     on<LoadAppDetail>(_onLoadAppDetail);
     on<LoadSimilarApps>(_onLoadSimilarApps);
     on<LoadDeveloperApps>(_onLoadDeveloperApps);
@@ -153,6 +155,18 @@ class AppBloc extends Bloc<AppEvent, AppState> {
     emit(AppLoading());
     try {
       await for (final apps in _repository.getTopCharts()) {
+        emit(AppsLoaded(apps));
+      }
+    } catch (e) {
+      emit(AppError(e.toString()));
+    }
+  }
+
+  // ADDED
+  Future<void> _onLoadPendingApps(LoadPendingApps event, Emitter<AppState> emit) async {
+    emit(AppLoading());
+    try {
+      await for (final apps in _repository.getPendingApps()) {
         emit(AppsLoaded(apps));
       }
     } catch (e) {

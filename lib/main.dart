@@ -7,11 +7,10 @@ import 'core/theme/app_theme.dart';
 import 'core/services/firebase_options.dart';
 import 'core/services/auth_service.dart';
 import 'data/repositories/app_repository.dart';
-import 'data/repositories/user_repository.dart';
 import 'presentation/providers/theme_provider.dart';
 import 'presentation/providers/locale_provider.dart';
 import 'presentation/bloc/auth_bloc.dart';
-import 'presentation/screens/admin/admin_dashboard_screen.dart';
+import 'presentation/screens/splash_screen.dart';
 import 'package:devstore/l10n/app_localizations.dart';
 
 void main() async {
@@ -22,25 +21,23 @@ void main() async {
   
   final authService = AuthService();
   final appRepository = AppRepository();
-  final userRepository = UserRepository();
   
   runApp(
     MultiRepositoryProvider(
       providers: [
         RepositoryProvider.value(value: authService),
         RepositoryProvider.value(value: appRepository),
-        RepositoryProvider.value(value: userRepository),
       ],
       child: BlocProvider(
         create: (context) => AuthBloc(authService)..add(AppStarted()),
-        child: const AdminPanelApp(),
+        child: const DevStoreApp(),
       ),
     ),
   );
 }
 
-class AdminPanelApp extends StatelessWidget {
-  const AdminPanelApp({super.key});
+class DevStoreApp extends StatelessWidget {
+  const DevStoreApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -52,7 +49,7 @@ class AdminPanelApp extends StatelessWidget {
       child: Consumer2<ThemeProvider, LocaleProvider>(
         builder: (context, themeProvider, localeProvider, child) {
           return MaterialApp(
-            title: 'DEVSTORE Admin',
+            title: 'DEVSTORE',
             debugShowCheckedModeBanner: false,
             theme: AppTheme.lightTheme,
             darkTheme: AppTheme.darkTheme,
@@ -69,7 +66,7 @@ class AdminPanelApp extends StatelessWidget {
               Locale('fr'),
               Locale('es'),
             ],
-            home: const AdminDashboardScreen(),
+            home: const SplashScreen(),
           );
         },
       ),

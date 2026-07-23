@@ -10,10 +10,11 @@ class UserRepository {
   Stream<List<UserModel>> getAllUsers() {
     return _firestore
         .collection(AppConstants.usersCollection)
-        .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.map((doc) => UserModel.fromFirestore(doc)).toList();
+      final users = snapshot.docs.map((doc) => UserModel.fromFirestore(doc)).toList();
+      users.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return users;
     });
   }
 
@@ -22,10 +23,11 @@ class UserRepository {
     return _firestore
         .collection(AppConstants.usersCollection)
         .where('isDeveloper', isEqualTo: true)
-        .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.map((doc) => UserModel.fromFirestore(doc)).toList();
+      final users = snapshot.docs.map((doc) => UserModel.fromFirestore(doc)).toList();
+      users.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return users;
     });
   }
 
@@ -100,10 +102,11 @@ class UserRepository {
   Stream<List<ReportModel>> getAllReports() {
     return _firestore
         .collection(AppConstants.reportsCollection)
-        .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.map((doc) => ReportModel.fromFirestore(doc)).toList();
+      final reports = snapshot.docs.map((doc) => ReportModel.fromFirestore(doc)).toList();
+      reports.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return reports;
     });
   }
 
@@ -112,10 +115,11 @@ class UserRepository {
     return _firestore
         .collection(AppConstants.reportsCollection)
         .where('status', isEqualTo: 'pending')
-        .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.map((doc) => ReportModel.fromFirestore(doc)).toList();
+      final reports = snapshot.docs.map((doc) => ReportModel.fromFirestore(doc)).toList();
+      reports.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return reports;
     });
   }
 
@@ -141,39 +145,38 @@ class UserRepository {
 
   // Get analytics
   Future<Map<String, dynamic>> getAnalytics() async {
-    final usersCount = await _firestore.collection(AppConstants.usersCollection).count().get();
-    final appsCount = await _firestore
-        .collection(AppConstants.appsCollection)
-        .where('status', isEqualTo: AppConstants.statusApproved)
-        .count()
-        .get();
-    final developersCount = await _firestore
-        .collection(AppConstants.usersCollection)
-        .where('isDeveloper', isEqualTo: true)
-        .count()
-        .get();
-    final pendingCount = await _firestore
-        .collection(AppConstants.appsCollection)
-        .where('status', isEqualTo: AppConstants.statusPending)
-        .count()
-        .get();
+    final usersSnapshot = await _firestore.collection(AppConstants.usersCollection).get();
+    final usersCount = usersSnapshot.size;
 
-    // Get total downloads
     final appsSnapshot = await _firestore
         .collection(AppConstants.appsCollection)
         .where('status', isEqualTo: AppConstants.statusApproved)
         .get();
+    final appsCount = appsSnapshot.size;
 
+    final developersSnapshot = await _firestore
+        .collection(AppConstants.usersCollection)
+        .where('isDeveloper', isEqualTo: true)
+        .get();
+    final developersCount = developersSnapshot.size;
+
+    final pendingSnapshot = await _firestore
+        .collection(AppConstants.appsCollection)
+        .where('status', isEqualTo: AppConstants.statusPending)
+        .get();
+    final pendingCount = pendingSnapshot.size;
+
+    // Get total downloads
     int totalDownloads = 0;
     for (final doc in appsSnapshot.docs) {
       totalDownloads += (doc.data()['downloadCount'] ?? 0) as int;
     }
 
     return {
-      'totalUsers': usersCount.count,
-      'totalApps': appsCount.count,
-      'totalDevelopers': developersCount.count,
-      'pendingApps': pendingCount.count,
+      'totalUsers': usersCount,
+      'totalApps': appsCount,
+      'totalDevelopers': developersCount,
+      'pendingApps': pendingCount,
       'totalDownloads': totalDownloads,
     };
   }

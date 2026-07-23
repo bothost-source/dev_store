@@ -23,6 +23,8 @@ class PendingApprovalsScreen extends StatelessWidget {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(content: Text(state.message), backgroundColor: AppColors.success),
               );
+              // Refresh the list after operation
+              context.read<AppBloc>().add(LoadPendingApps());
             } else if (state is AppError) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(content: Text(state.message), backgroundColor: Colors.red),
@@ -57,7 +59,10 @@ class PendingApprovalsScreen extends StatelessWidget {
               );
             }
             if (state is AppsLoaded) {
-              final pendingApps = state.apps.where((a) => a.status == 'pending' || a.status == 'PENDING').toList();
+              final pendingApps = state.apps.where((a) => 
+                a.status.toLowerCase() == 'pending' || 
+                a.status.toLowerCase() == 'PENDING'.toLowerCase()
+              ).toList();
 
               if (pendingApps.isEmpty) {
                 return Center(
@@ -103,46 +108,96 @@ class _PendingAppCard extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
+      margin: const EdgeInsets.only(bottom: 16),
+      elevation: 4,
+      child: Container(
+        width: double.infinity,
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
+            // App info row
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Icon
                 Container(
                   width: 64,
                   height: 64,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(12),
                     color: AppColors.primary.withOpacity(0.1),
+                    border: Border.all(color: Colors.white24),
                   ),
                   child: app.iconUrl.isNotEmpty
                       ? ClipRRect(
                           borderRadius: BorderRadius.circular(12),
-                          child: Image.network(app.iconUrl, fit: BoxFit.cover),
+                          child: Image.network(
+                            app.iconUrl,
+                            fit: BoxFit.cover,
+                            width: 64,
+                            height: 64,
+                            errorBuilder: (context, error, stackTrace) {
+                              return const Icon(Icons.android, color: AppColors.primary, size: 32);
+                            },
+                          ),
                         )
-                      : const Icon(Icons.android, color: AppColors.primary),
+                      : const Icon(Icons.android, color: AppColors.primary, size: 32),
                 ),
                 const SizedBox(width: 16),
+                // App details
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(app.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                      Text(
+                        app.name,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                          color: Colors.white,
+                        ),
+                      ),
                       const SizedBox(height: 4),
-                      Text(app.developerName, style: TextStyle(color: AppColors.textMuted, fontSize: 13)),
+                      Text(
+                        app.developerName,
+                        style: TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 14,
+                        ),
+                      ),
                       const SizedBox(height: 4),
-                      Text('v${app.version} • ${app.category}', style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          app.status.toUpperCase(),
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.orange,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 12),
-            Text(app.description, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13)),
+            // Description
+            Text(
+              app.description,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 14, color: Colors.white70),
+            ),
             const SizedBox(height: 16),
+            // Action buttons - ALWAYS VISIBLE
             Row(
               children: [
                 Expanded(
@@ -150,23 +205,37 @@ class _PendingAppCard extends StatelessWidget {
                     onPressed: () {
                       context.read<AppBloc>().add(ApproveAppEvent(app.id));
                     },
-                    icon: const Icon(Icons.check, size: 18),
-                    label: Text(l10n.approve),
+                    icon: const Icon(Icons.check_circle, size: 20),
+                    label: const Text(
+                      'APPROVE',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.success,
+                      backgroundColor: Colors.green,
                       foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                     ),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: OutlinedButton.icon(
+                  child: ElevatedButton.icon(
                     onPressed: () => _showRejectDialog(context, app.id),
-                    icon: const Icon(Icons.close, size: 18),
-                    label: Text(l10n.reject),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.error,
-                      side: const BorderSide(color: AppColors.error),
+                    icon: const Icon(Icons.cancel, size: 20),
+                    label: const Text(
+                      'REJECT',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                     ),
                   ),
                 ),
@@ -184,26 +253,33 @@ class _PendingAppCard extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Reject App'),
+        backgroundColor: const Color(0xFF1A1A1A),
+        title: const Text('Reject App', style: TextStyle(color: Colors.white)),
         content: TextField(
           controller: reasonController,
+          style: const TextStyle(color: Colors.white),
           decoration: const InputDecoration(
             labelText: 'Reason for rejection',
+            labelStyle: TextStyle(color: Colors.white70),
             hintText: 'Why is this app being rejected?',
+            hintStyle: TextStyle(color: Colors.white38),
+            border: OutlineInputBorder(),
           ),
           maxLines: 3,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
           ),
           ElevatedButton(
             onPressed: () {
-              context.read<AppBloc>().add(RejectAppEvent(appId, reasonController.text));
-              Navigator.pop(context);
+              if (reasonController.text.trim().isNotEmpty) {
+                context.read<AppBloc>().add(RejectAppEvent(appId, reasonController.text.trim()));
+                Navigator.pop(context);
+              }
             },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             child: const Text('Reject'),
           ),
         ],

@@ -1,40 +1,77 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../bloc/auth_bloc.dart';
-import 'home_screen.dart';
-import 'search_screen.dart';
-import 'downloads_screen.dart';
-import 'settings_screen.dart';
-import '../../widgets/bottom_nav_bar.dart';
+import 'package:provider/provider.dart';
+import 'core/theme/app_theme.dart';
+import 'core/services/firebase_options.dart';
+import 'core/services/auth_service.dart';
+import 'data/repositories/app_repository.dart';
+import 'data/repositories/user_repository.dart';
+import 'presentation/providers/theme_provider.dart';
+import 'presentation/providers/locale_provider.dart';
+import 'presentation/bloc/auth_bloc.dart';
+import 'presentation/screens/admin/admin_dashboard_screen.dart';
+import 'package:devstore/l10n/app_localizations.dart';
 
-class MainScreen extends StatefulWidget {
-  const MainScreen({super.key});
-
-  @override
-  State<MainScreen> createState() => _MainScreenState();
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  
+  final authService = AuthService();
+  final appRepository = AppRepository();
+  final userRepository = UserRepository();
+  
+  runApp(
+    MultiRepositoryProvider(
+      providers: [
+        RepositoryProvider.value(value: authService),
+        RepositoryProvider.value(value: appRepository),
+        RepositoryProvider.value(value: userRepository),
+      ],
+      child: BlocProvider(
+        create: (context) => AuthBloc(authService)..add(AppStarted()),
+        child: const AdminPanelApp(),
+      ),
+    ),
+  );
 }
 
-class _MainScreenState extends State<MainScreen> {
-  int _currentIndex = 0;
-
-  final screens = [
-    const HomeScreen(),
-    const SearchScreen(),
-    const DownloadsScreen(),
-    const SettingsScreen(),
-  ];
+class AdminPanelApp extends StatelessWidget {
+  const AdminPanelApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: IndexedStack(
-        index: _currentIndex,
-        children: screens,
-      ),
-      bottomNavigationBar: BottomNavBar(
-        currentIndex: _currentIndex,
-        onTap: (index) => setState(() => _currentIndex = index),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(create: (_) => LocaleProvider()),
+      ],
+      child: Consumer2<ThemeProvider, LocaleProvider>(
+        builder: (context, themeProvider, localeProvider, child) {
+          return MaterialApp(
+            title: 'DEVSTORE Admin',
+            debugShowCheckedModeBanner: false,
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: themeProvider.themeMode,
+            locale: localeProvider.locale,
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: const [
+              Locale('en'),
+              Locale('fr'),
+              Locale('es'),
+            ],
+            home: const AdminDashboardScreen(),
+          );
+        },
       ),
     );
   }

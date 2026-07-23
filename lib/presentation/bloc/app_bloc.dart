@@ -3,8 +3,7 @@ import 'package:equatable/equatable.dart';
 import '../../data/models/app_model.dart';
 import '../../data/repositories/app_repository.dart';
 
-// ─── EVENTS ───────────────────────────────────
-
+// Events
 abstract class AppEvent extends Equatable {
   const AppEvent();
   @override
@@ -16,9 +15,6 @@ class LoadApps extends AppEvent {
   final String? searchQuery;
   final String sortBy;
   const LoadApps({this.category, this.searchQuery, this.sortBy = 'createdAt'});
-
-  @override
-  List<Object?> get props => [category, searchQuery, sortBy];
 }
 
 class LoadFeaturedApps extends AppEvent {
@@ -40,64 +36,42 @@ class LoadPendingApps extends AppEvent {
 class LoadAppDetail extends AppEvent {
   final String appId;
   const LoadAppDetail(this.appId);
-
-  @override
-  List<Object?> get props => [appId];
 }
 
 class LoadSimilarApps extends AppEvent {
   final String appId;
   final String category;
   const LoadSimilarApps(this.appId, this.category);
-
-  @override
-  List<Object?> get props => [appId, category];
 }
 
 class LoadDeveloperApps extends AppEvent {
   final String developerId;
   const LoadDeveloperApps(this.developerId);
-
-  @override
-  List<Object?> get props => [developerId];
 }
 
 class ApproveAppEvent extends AppEvent {
   final String appId;
   const ApproveAppEvent(this.appId);
-
-  @override
-  List<Object?> get props => [appId];
 }
 
 class RejectAppEvent extends AppEvent {
   final String appId;
   final String reason;
   const RejectAppEvent(this.appId, this.reason);
-
-  @override
-  List<Object?> get props => [appId, reason];
 }
 
 class ToggleFeaturedEvent extends AppEvent {
   final String appId;
   final bool isFeatured;
   const ToggleFeaturedEvent(this.appId, this.isFeatured);
-
-  @override
-  List<Object?> get props => [appId, isFeatured];
 }
 
 class DeleteAppEvent extends AppEvent {
   final String appId;
   const DeleteAppEvent(this.appId);
-
-  @override
-  List<Object?> get props => [appId];
 }
 
-// ─── STATES ───────────────────────────────────
-
+// States
 abstract class AppState extends Equatable {
   const AppState();
   @override
@@ -105,13 +79,10 @@ abstract class AppState extends Equatable {
 }
 
 class AppInitial extends AppState {}
-
 class AppLoading extends AppState {}
-
 class AppsLoaded extends AppState {
   final List<AppModel> apps;
   const AppsLoaded(this.apps);
-
   @override
   List<Object?> get props => [apps];
 }
@@ -120,30 +91,23 @@ class AppDetailLoaded extends AppState {
   final AppModel app;
   final List<AppModel> similarApps;
   const AppDetailLoaded(this.app, {this.similarApps = const []});
-
   @override
   List<Object?> get props => [app, similarApps];
 }
 
 class AppOperationSuccess extends AppState {
   final String message;
-  final List<AppModel>? apps; // Optional refreshed list
-  const AppOperationSuccess(this.message, {this.apps});
-
-  @override
-  List<Object?> get props => [message, apps];
+  const AppOperationSuccess(this.message);
 }
 
 class AppError extends AppState {
   final String message;
   const AppError(this.message);
-
   @override
   List<Object?> get props => [message];
 }
 
-// ─── BLOC ─────────────────────────────────────
-
+// BLoC
 class AppBloc extends Bloc<AppEvent, AppState> {
   final AppRepository _repository;
 
@@ -161,8 +125,6 @@ class AppBloc extends Bloc<AppEvent, AppState> {
     on<ToggleFeaturedEvent>(_onToggleFeatured);
     on<DeleteAppEvent>(_onDeleteApp);
   }
-
-  // ─── STREAM-BASED READ OPERATIONS ───────────
 
   Future<void> _onLoadApps(LoadApps event, Emitter<AppState> emit) async {
     emit(AppLoading());
@@ -213,17 +175,6 @@ class AppBloc extends Bloc<AppEvent, AppState> {
     );
   }
 
-  Future<void> _onLoadDeveloperApps(LoadDeveloperApps event, Emitter<AppState> emit) async {
-    emit(AppLoading());
-    await emit.forEach(
-      _repository.getDeveloperApps(event.developerId),
-      onData: (apps) => AppsLoaded(apps),
-      onError: (error, stackTrace) => AppError(error.toString()),
-    );
-  }
-
-  // ─── FUTURE-BASED READ OPERATIONS ───────────
-
   Future<void> _onLoadAppDetail(LoadAppDetail event, Emitter<AppState> emit) async {
     emit(AppLoading());
     try {
@@ -249,10 +200,16 @@ class AppBloc extends Bloc<AppEvent, AppState> {
     }
   }
 
-  // ─── WRITE OPERATIONS ───────────────────────
+  Future<void> _onLoadDeveloperApps(LoadDeveloperApps event, Emitter<AppState> emit) async {
+    emit(AppLoading());
+    await emit.forEach(
+      _repository.getDeveloperApps(event.developerId),
+      onData: (apps) => AppsLoaded(apps),
+      onError: (error, stackTrace) => AppError(error.toString()),
+    );
+  }
 
   Future<void> _onApproveApp(ApproveAppEvent event, Emitter<AppState> emit) async {
-    emit(AppLoading());
     try {
       await _repository.approveApp(event.appId);
       emit(const AppOperationSuccess('App approved successfully'));
@@ -262,7 +219,6 @@ class AppBloc extends Bloc<AppEvent, AppState> {
   }
 
   Future<void> _onRejectApp(RejectAppEvent event, Emitter<AppState> emit) async {
-    emit(AppLoading());
     try {
       await _repository.rejectApp(event.appId, event.reason);
       emit(const AppOperationSuccess('App rejected'));
@@ -272,7 +228,6 @@ class AppBloc extends Bloc<AppEvent, AppState> {
   }
 
   Future<void> _onToggleFeatured(ToggleFeaturedEvent event, Emitter<AppState> emit) async {
-    emit(AppLoading());
     try {
       await _repository.toggleFeatured(event.appId, event.isFeatured);
       emit(const AppOperationSuccess('Featured status updated'));
@@ -282,7 +237,6 @@ class AppBloc extends Bloc<AppEvent, AppState> {
   }
 
   Future<void> _onDeleteApp(DeleteAppEvent event, Emitter<AppState> emit) async {
-    emit(AppLoading());
     try {
       await _repository.deleteApp(event.appId);
       emit(const AppOperationSuccess('App deleted'));

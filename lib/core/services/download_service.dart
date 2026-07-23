@@ -1,8 +1,8 @@
 import 'dart:io';
+import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
-import 'package:permission_handler/permission_handler.dart';
 import 'package:open_filex/open_filex.dart';
 
 class DownloadService {
@@ -13,22 +13,21 @@ class DownloadService {
     _dio.options.receiveTimeout = const Duration(minutes: 5);
   }
 
-  Future<String> downloadApk({
-    required String url,
-    required String fileName,
-    required Function(int received, int total) onProgress,
-  }) async {
-    final status = await Permission.storage.request();
-    if (!status.isGranted) {
-      throw Exception('Storage permission denied');
-    }
-
+  Future<Directory> _getDownloadDirectory() async {
     final dir = await getExternalStorageDirectory() ?? await getApplicationDocumentsDirectory();
     final downloadDir = Directory('${dir.path}/devstore_downloads');
     if (!await downloadDir.exists()) {
       await downloadDir.create(recursive: true);
     }
+    return downloadDir;
+  }
 
+  Future<String> downloadApk({
+    required String url,
+    required String fileName,
+    required Function(int received, int total) onProgress,
+  }) async {
+    final downloadDir = await _getDownloadDirectory();
     final filePath = path.join(downloadDir.path, fileName);
     final file = File(filePath);
 
@@ -66,14 +65,14 @@ class DownloadService {
   }
 
   Future<bool> isDownloaded(String fileName) async {
-    final dir = await getExternalStorageDirectory() ?? await getApplicationDocumentsDirectory();
-    final file = File('${dir.path}/devstore_downloads/$fileName');
+    final downloadDir = await _getDownloadDirectory();
+    final file = File(path.join(downloadDir.path, fileName));
     return await file.exists();
   }
 
   Future<String?> getDownloadedFilePath(String fileName) async {
-    final dir = await getExternalStorageDirectory() ?? await getApplicationDocumentsDirectory();
-    final file = File('${dir.path}/devstore_downloads/$fileName');
+    final downloadDir = await _getDownloadDirectory();
+    final file = File(path.join(downloadDir.path, fileName));
     if (await file.exists()) {
       return file.path;
     }
@@ -81,8 +80,8 @@ class DownloadService {
   }
 
   Future<void> deleteDownloadedFile(String fileName) async {
-    final dir = await getExternalStorageDirectory() ?? await getApplicationDocumentsDirectory();
-    final file = File('${dir.path}/devstore_downloads/$fileName');
+    final downloadDir = await _getDownloadDirectory();
+    final file = File(path.join(downloadDir.path, fileName));
     if (await file.exists()) {
       await file.delete();
     }
@@ -92,21 +91,37 @@ class DownloadService {
     required String url,
     required String fileName,
   }) async* {
-    final dir = await getExternalStorageDirectory() ?? await getApplicationDocumentsDirectory();
-    final filePath = path.join(dir.path, 'devstore_downloads', fileName);
+    final downloadDir = await _getDownloadDirectory();
+    final filePath = path.join(downloadDir.path, fileName);
 
-    final response = await _dio.download(
+    final progressController = StreamController<double>.broadcast();
+    late final Future<Response> downloadFuture;
+
+    downloadFuture = _dio.download(
       url,
       filePath,
       onReceiveProgress: (received, total) {
-        if (total != -1) {}
+        if (total != -1 && !progressController.isClosed) {
+          progressController.add(received / total);
+        }
       },
     );
 
+    await for (final progress in progressController.stream) {
+      yield progress;
+    }
+
+    final response = await downloadFuture;
+
     if (response.statusCode == 200) {
+      if (!progressController.isClosed) {
+        progressController.add(1.0);
+      }
       yield 1.0;
     } else {
       throw Exception('Download failed: ${response.statusCode}');
     }
+
+    await progressController.close();
   }
 }

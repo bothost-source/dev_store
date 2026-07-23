@@ -14,18 +14,62 @@ class AllAppsScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('All Apps')),
       body: BlocProvider(
-        create: (_) => AppBloc(context.read())..add(const LoadApps()),
+        create: (_) => AppBloc(context.read())..add(LoadApps()),
         child: BlocConsumer<AppBloc, AppState>(
           listener: (context, state) {
             if (state is AppOperationSuccess) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(content: Text(state.message)),
               );
+              // Refresh list after operation
+              context.read<AppBloc>().add(LoadApps());
+            } else if (state is AppError) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(state.message), backgroundColor: Colors.red),
+              );
             }
           },
           builder: (context, state) {
-            if (state is AppLoading) return const ShimmerAppList();
+            if (state is AppLoading) {
+              return const ShimmerAppList();
+            }
+            if (state is AppError) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Error: ${state.message}',
+                      style: const TextStyle(color: Colors.white),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton(
+                      onPressed: () {
+                        context.read<AppBloc>().add(LoadApps());
+                      },
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
+              );
+            }
             if (state is AppsLoaded) {
+              if (state.apps.isEmpty) {
+                return const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.apps, size: 64, color: Colors.white24),
+                      SizedBox(height: 16),
+                      Text('No apps found', style: TextStyle(color: Colors.white70)),
+                    ],
+                  ),
+                );
+              }
+
               return ListView.builder(
                 padding: const EdgeInsets.all(16),
                 itemCount: state.apps.length,
@@ -35,7 +79,9 @@ class AllAppsScreen extends StatelessWidget {
                 },
               );
             }
-            return const SizedBox.shrink();
+            return const Center(
+              child: CircularProgressIndicator(),
+            );
           },
         ),
       ),
@@ -51,64 +97,156 @@ class _AdminAppCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      child: ListTile(
-        leading: Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(10),
-            color: AppColors.primary.withOpacity(0.1),
+      elevation: 2,
+      child: InkWell(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => AppDetailScreen(app: app),
+            ),
+          );
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              // App icon
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  color: AppColors.primary.withOpacity(0.1),
+                  border: Border.all(color: Colors.white12),
+                ),
+                child: app.iconUrl.isNotEmpty
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.network(
+                          app.iconUrl,
+                          fit: BoxFit.cover,
+                          width: 56,
+                          height: 56,
+                          errorBuilder: (context, error, stackTrace) {
+                            return const Icon(Icons.android, color: AppColors.primary, size: 28);
+                          },
+                        ),
+                      )
+                    : const Icon(Icons.android, color: AppColors.primary, size: 28),
+              ),
+              const SizedBox(width: 16),
+              // App info
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      app.name,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      app.developerName,
+                      style: TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 13,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: _getStatusColor(app.status).withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        app.status.toUpperCase(),
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: _getStatusColor(app.status),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Actions menu
+              PopupMenuButton<String>(
+                onSelected: (value) {
+                  if (value == 'feature') {
+                    context.read<AppBloc>().add(ToggleFeaturedEvent(app.id, !app.isFeatured));
+                  } else if (value == 'delete') {
+                    _showDeleteDialog(context, app.id);
+                  }
+                },
+                itemBuilder: (context) => [
+                  PopupMenuItem(
+                    value: 'feature',
+                    child: Row(
+                      children: [
+                        Icon(
+                          app.isFeatured ? Icons.star : Icons.star_border,
+                          color: Colors.amber,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(app.isFeatured ? 'Unfeature' : 'Feature'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'delete',
+                    child: Row(
+                      children: [
+                        Icon(Icons.delete, color: AppColors.error),
+                        SizedBox(width: 8),
+                        Text('Delete', style: TextStyle(color: AppColors.error)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-          child: app.iconUrl.isNotEmpty
-              ? ClipRRect(borderRadius: BorderRadius.circular(10), child: Image.network(app.iconUrl, fit: BoxFit.cover))
-              : const Icon(Icons.android, color: AppColors.primary),
         ),
-        title: Text(app.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text('${app.developerName} • ${app.status.toUpperCase()}'),
-        trailing: PopupMenuButton<String>(
-          onSelected: (value) {
-            if (value == 'feature') {
-              context.read<AppBloc>().add(ToggleFeaturedEvent(app.id, !app.isFeatured));
-            } else if (value == 'delete') {
-              _showDeleteDialog(context, app.id);
-            }
-          },
-          itemBuilder: (context) => [
-            PopupMenuItem(
-              value: 'feature',
-              child: Row(
-                children: [
-                  Icon(app.isFeatured ? Icons.star : Icons.star_border, color: Colors.amber),
-                  const SizedBox(width: 8),
-                  Text(app.isFeatured ? 'Unfeature' : 'Feature'),
-                ],
-              ),
-            ),
-            const PopupMenuItem(
-              value: 'delete',
-              child: Row(
-                children: [
-                  Icon(Icons.delete, color: AppColors.error),
-                  SizedBox(width: 8),
-                  Text('Delete', style: TextStyle(color: AppColors.error)),
-                ],
-              ),
-            ),
-          ],
-        ),
-        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AppDetailScreen(app: app))),
       ),
     );
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'approved':
+        return Colors.green;
+      case 'pending':
+        return Colors.orange;
+      case 'rejected':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
   }
 
   void _showDeleteDialog(BuildContext context, String appId) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete App'),
-        content: const Text('Are you sure? This cannot be undone.'),
+        backgroundColor: const Color(0xFF1A1A1A),
+        title: const Text('Delete App', style: TextStyle(color: Colors.white)),
+        content: const Text(
+          'Are you sure? This cannot be undone.',
+          style: TextStyle(color: Colors.white70),
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
+          ),
           ElevatedButton(
             onPressed: () {
               context.read<AppBloc>().add(DeleteAppEvent(appId));

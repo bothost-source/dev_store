@@ -331,6 +331,8 @@ class _UploadAppScreenState extends State<UploadAppScreen> {
 
   InputDecoration _inputDecoration(String label, IconData icon, {String? hint}) {
     return InputDecoration(
+      filled: true,                                    // ADD THIS
+      fillColor: const Color(0xFF1A1A1A),            // ADD THIS
       labelText: label,
       hintText: hint,
       labelStyle: const TextStyle(color: Colors.white70),

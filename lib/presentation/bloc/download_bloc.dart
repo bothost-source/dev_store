@@ -15,12 +15,16 @@ class StartDownload extends DownloadEvent {
   final String url;
   final String fileName;
   const StartDownload({required this.appId, required this.url, required this.fileName});
+  @override
+  List<Object?> get props => [appId, url, fileName];
 }
 
 class CancelDownload extends DownloadEvent {}
 class InstallDownloadedApp extends DownloadEvent {
   final String filePath;
   const InstallDownloadedApp(this.filePath);
+  @override
+  List<Object?> get props => [filePath];
 }
 
 // States
@@ -59,6 +63,8 @@ class InstallSuccess extends DownloadState {}
 class InstallError extends DownloadState {
   final String message;
   const InstallError(this.message);
+  @override
+  List<Object?> get props => [message];
 }
 
 // BLoC
@@ -71,26 +77,22 @@ class DownloadBloc extends Bloc<DownloadEvent, DownloadState> {
     on<InstallDownloadedApp>(_onInstallApp);
   }
 
+  // FIXED: Simpler await-for instead of emit.forEach
   Future<void> _onStartDownload(StartDownload event, Emitter<DownloadState> emit) async {
     emit(const DownloadInProgress(progress: 0, received: 0, total: 0));
+    
     try {
-      await emit.forEach(
-        _downloadService.downloadWithProgress(
-          url: event.url,
-          fileName: event.fileName,
-        ),
-        onData: (progress) {
-          final received = (progress * 100).toInt();
-          return DownloadInProgress(
-            progress: progress,
-            received: received,
-            total: 100,
-          );
-        },
-        onError: (error, stackTrace) => DownloadError(error.toString()),
-      );
+      await for (final progress in _downloadService.downloadWithProgress(
+        url: event.url,
+        fileName: event.fileName,
+      )) {
+        emit(DownloadInProgress(
+          progress: progress,
+          received: (progress * 100).toInt(),
+          total: 100,
+        ));
+      }
 
-      // Download completed successfully
       final filePath = await _downloadService.getDownloadedFilePath(event.fileName);
       if (filePath != null) {
         await _appRepository.incrementDownloadCount(event.appId);

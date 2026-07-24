@@ -33,7 +33,13 @@ class _FullCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
+      color: const Color(0xFF1A1A1A),
       margin: const EdgeInsets.only(bottom: 12),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: Colors.white.withOpacity(0.06)),
+      ),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
@@ -53,7 +59,13 @@ class _FullCard extends StatelessWidget {
                   child: app.iconUrl.isNotEmpty
                       ? ClipRRect(
                           borderRadius: BorderRadius.circular(16),
-                          child: Image.network(app.iconUrl, fit: BoxFit.cover),
+                          child: Image.network(
+                            app.iconUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return const Icon(Icons.android, color: AppColors.primary);
+                            },
+                          ),
                         )
                       : const Icon(Icons.android, color: AppColors.primary),
                 ),
@@ -65,14 +77,21 @@ class _FullCard extends StatelessWidget {
                   children: [
                     Text(
                       app.name,
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: Colors.white,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
                     Text(
                       app.developerName,
-                      style: TextStyle(color: AppColors.textMuted, fontSize: 13),
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 13,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -83,22 +102,34 @@ class _FullCard extends StatelessWidget {
                         const SizedBox(width: 4),
                         Text(
                           app.averageRating.toStringAsFixed(1),
-                          style: const TextStyle(fontSize: 12),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.white,
+                          ),
                         ),
                         const SizedBox(width: 12),
                         Text(
                           Helpers.formatNumber(app.downloadCount),
-                          style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.white70,
+                          ),
                         ),
                         const SizedBox(width: 4),
-                        Text(
+                        const Text(
                           'downloads',
-                          style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.white70,
+                          ),
                         ),
                         const Spacer(),
                         Text(
                           Helpers.formatFileSize(app.apkSize),
-                          style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.white70,
+                          ),
                         ),
                       ],
                     ),
@@ -131,26 +162,40 @@ class _CompactCard extends StatelessWidget {
             height: 100,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(16),
-              color: AppColors.primary.withOpacity(0.1),
+              color: const Color(0xFF1A1A1A),
+              border: Border.all(color: Colors.white.withOpacity(0.06)),
             ),
             child: app.iconUrl.isNotEmpty
                 ? ClipRRect(
                     borderRadius: BorderRadius.circular(16),
-                    child: Image.network(app.iconUrl, fit: BoxFit.cover),
+                    child: Image.network(
+                      app.iconUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return const Icon(Icons.android, color: AppColors.primary);
+                      },
+                    ),
                   )
                 : const Icon(Icons.android, color: AppColors.primary),
           ),
           const SizedBox(height: 8),
           Text(
             app.name,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 13,
+              color: Colors.white,
+            ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 2),
           Text(
             app.developerName,
-            style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+            style: const TextStyle(
+              fontSize: 11,
+              color: Colors.white70,
+            ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
@@ -160,7 +205,10 @@ class _CompactCard extends StatelessWidget {
               const SizedBox(width: 2),
               Text(
                 app.averageRating.toStringAsFixed(1),
-                style: const TextStyle(fontSize: 11),
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: Colors.white,
+                ),
               ),
             ],
           ),

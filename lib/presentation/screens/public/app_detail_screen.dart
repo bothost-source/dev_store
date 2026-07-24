@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/helpers.dart';
@@ -30,12 +29,15 @@ class _AppDetailScreenState extends State<AppDetailScreen> {
     final app = widget.app;
 
     return Scaffold(
+      backgroundColor: Colors.black,
       body: CustomScrollView(
         slivers: [
           // App Bar with icon
           SliverAppBar(
             expandedHeight: 200,
             pinned: true,
+            backgroundColor: Colors.black,
+            foregroundColor: Colors.white,
             flexibleSpace: FlexibleSpaceBar(
               background: Container(
                 decoration: BoxDecoration(
@@ -96,13 +98,18 @@ class _AppDetailScreenState extends State<AppDetailScreen> {
                           children: [
                             Text(
                               app.name,
-                              style: Theme.of(context).textTheme.displaySmall,
+                              style: const TextStyle(
+                                fontSize: 28,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
                             ),
                             const SizedBox(height: 4),
                             Text(
                               app.developerName,
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: AppColors.textMuted,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: Colors.white70,
                               ),
                             ),
                           ],
@@ -167,15 +174,24 @@ class _AppDetailScreenState extends State<AppDetailScreen> {
                           listener: (context, state) {
                             if (state is DownloadCompleted) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text(l10n.downloadComplete)),
+                                SnackBar(
+                                  content: Text(l10n.downloadComplete),
+                                  backgroundColor: Colors.black,
+                                ),
                               );
                             } else if (state is DownloadError) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text(state.message), backgroundColor: Colors.red),
+                                SnackBar(
+                                  content: Text(state.message),
+                                  backgroundColor: Colors.red,
+                                ),
                               );
                             } else if (state is InstallSuccess) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('App installed successfully!')),
+                                const SnackBar(
+                                  content: Text('App installed successfully!'),
+                                  backgroundColor: Colors.black,
+                                ),
                               );
                             }
                           },
@@ -183,9 +199,16 @@ class _AppDetailScreenState extends State<AppDetailScreen> {
                             if (state is DownloadInProgress) {
                               return Column(
                                 children: [
-                                  LinearProgressIndicator(value: state.progress),
+                                  LinearProgressIndicator(
+                                    value: state.progress,
+                                    backgroundColor: Colors.white24,
+                                    valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                                  ),
                                   const SizedBox(height: 8),
-                                  Text('${(state.progress * 100).toStringAsFixed(0)}%'),
+                                  Text(
+                                    '${(state.progress * 100).toStringAsFixed(0)}%',
+                                    style: const TextStyle(color: Colors.white),
+                                  ),
                                 ],
                               );
                             }
@@ -227,45 +250,71 @@ class _AppDetailScreenState extends State<AppDetailScreen> {
                       const SizedBox(width: 12),
                       IconButton(
                         onPressed: () => _showReportDialog(context),
-                        icon: const Icon(Icons.flag_outlined),
+                        icon: const Icon(Icons.flag_outlined, color: Colors.white70),
                         tooltip: l10n.reportApp,
                       ),
                       IconButton(
                         onPressed: () {
                           // Share app
                         },
-                        icon: const Icon(Icons.share_outlined),
+                        icon: const Icon(Icons.share_outlined, color: Colors.white70),
                       ),
                     ],
                   ),
                   const SizedBox(height: 24),
 
-                  // Screenshots
+                  // Screenshots — VERTICAL STACK
                   if (app.screenshotUrls.isNotEmpty) ...[
-                    Text(l10n.description, style: Theme.of(context).textTheme.titleLarge),
-                    const SizedBox(height: 12),
-                    CarouselSlider(
-                      options: CarouselOptions(
-                        height: 200,
-                        viewportFraction: 0.8,
-                        enlargeCenterPage: true,
+                    Text(
+                      'Screenshots',
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
                       ),
-                      items: app.screenshotUrls.map((url) {
+                    ),
+                    const SizedBox(height: 12),
+                    // VERTICAL screenshots instead of carousel
+                    Column(
+                      children: app.screenshotUrls.map((url) {
                         return Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 4),
+                          margin: const EdgeInsets.only(bottom: 12),
+                          width: double.infinity,
+                          height: 400,
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(16),
-                            color: Colors.grey[200],
+                            color: const Color(0xFF1A1A1A),
                           ),
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(16),
                             child: Image.network(
                               url,
                               fit: BoxFit.cover,
+                              loadingBuilder: (context, child, loadingProgress) {
+                                if (loadingProgress == null) return child;
+                                return Container(
+                                  color: const Color(0xFF1A1A1A),
+                                  child: const Center(
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white24,
+                                    ),
+                                  ),
+                                );
+                              },
                               errorBuilder: (context, error, stackTrace) {
                                 return Container(
-                                  color: Colors.grey[300],
-                                  child: const Icon(Icons.image_not_supported, color: Colors.grey),
+                                  color: const Color(0xFF1A1A1A),
+                                  child: const Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.broken_image, color: Colors.white24, size: 48),
+                                      SizedBox(height: 8),
+                                      Text(
+                                        'Image failed to load',
+                                        style: TextStyle(color: Colors.white38),
+                                      ),
+                                    ],
+                                  ),
                                 );
                               },
                             ),
@@ -277,18 +326,25 @@ class _AppDetailScreenState extends State<AppDetailScreen> {
                   ],
 
                   // Description
-                  Text(l10n.description, style: Theme.of(context).textTheme.titleLarge),
+                  Text(
+                    l10n.description,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
                   const SizedBox(height: 8),
                   AnimatedCrossFade(
                     firstChild: Text(
                       app.description,
                       maxLines: 3,
                       overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodyMedium,
+                      style: const TextStyle(color: Colors.white70, height: 1.5),
                     ),
                     secondChild: Text(
                       app.description,
-                      style: Theme.of(context).textTheme.bodyMedium,
+                      style: const TextStyle(color: Colors.white70, height: 1.5),
                     ),
                     crossFadeState: _isExpanded
                         ? CrossFadeState.showSecond
@@ -298,7 +354,10 @@ class _AppDetailScreenState extends State<AppDetailScreen> {
                   if (app.description.length > 100)
                     TextButton(
                       onPressed: () => setState(() => _isExpanded = !_isExpanded),
-                      child: Text(_isExpanded ? 'Show Less' : 'Read More'),
+                      child: Text(
+                        _isExpanded ? 'Show Less' : 'Read More',
+                        style: const TextStyle(color: Colors.white),
+                      ),
                     ),
                   const SizedBox(height: 24),
 
@@ -309,7 +368,7 @@ class _AppDetailScreenState extends State<AppDetailScreen> {
                       runSpacing: 8,
                       children: app.tags.map((tag) {
                         return Chip(
-                          label: Text(tag),
+                          label: Text(tag, style: const TextStyle(color: Colors.white)),
                           backgroundColor: AppColors.primary.withOpacity(0.1),
                           side: BorderSide.none,
                         );
@@ -332,10 +391,20 @@ class _AppDetailScreenState extends State<AppDetailScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(l10n.reviews, style: Theme.of(context).textTheme.titleLarge),
+                      Text(
+                        l10n.reviews,
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
                       TextButton(
                         onPressed: () => _showWriteReviewDialog(context),
-                        child: Text(l10n.writeReview),
+                        child: Text(
+                          l10n.writeReview,
+                          style: const TextStyle(color: Colors.white),
+                        ),
                       ),
                     ],
                   ),
@@ -358,26 +427,33 @@ class _AppDetailScreenState extends State<AppDetailScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(l10n.reportApp),
+        backgroundColor: const Color(0xFF1A1A1A),
+        title: Text(l10n.reportApp, style: const TextStyle(color: Colors.white)),
         content: TextField(
           controller: reasonController,
+          style: const TextStyle(color: Colors.white),
           decoration: InputDecoration(
             labelText: l10n.reportReason,
             hintText: 'Why are you reporting this app?',
+            labelStyle: const TextStyle(color: Colors.white70),
+            hintStyle: const TextStyle(color: Colors.white38),
+            border: const OutlineInputBorder(),
           ),
           maxLines: 3,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text(l10n.cancel),
+            child: Text(l10n.cancel, style: const TextStyle(color: Colors.white70)),
           ),
           ElevatedButton(
             onPressed: () {
-              // Submit report
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(l10n.reportSubmitted)),
+                SnackBar(
+                  content: Text(l10n.reportSubmitted),
+                  backgroundColor: Colors.black,
+                ),
               );
             },
             child: Text(l10n.submit),
@@ -395,7 +471,8 @@ class _AppDetailScreenState extends State<AppDetailScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(l10n.writeReview),
+        backgroundColor: const Color(0xFF1A1A1A),
+        title: Text(l10n.writeReview, style: const TextStyle(color: Colors.white)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -411,9 +488,13 @@ class _AppDetailScreenState extends State<AppDetailScreen> {
             const SizedBox(height: 16),
             TextField(
               controller: commentController,
+              style: const TextStyle(color: Colors.white),
               decoration: const InputDecoration(
                 labelText: 'Your review',
                 hintText: 'Share your experience...',
+                labelStyle: TextStyle(color: Colors.white70),
+                hintStyle: TextStyle(color: Colors.white38),
+                border: OutlineInputBorder(),
               ),
               maxLines: 3,
             ),
@@ -422,11 +503,10 @@ class _AppDetailScreenState extends State<AppDetailScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text(l10n.cancel),
+            child: Text(l10n.cancel, style: const TextStyle(color: Colors.white70)),
           ),
           ElevatedButton(
             onPressed: () {
-              // Submit review
               Navigator.pop(context);
             },
             child: Text(l10n.submit),
@@ -458,11 +538,15 @@ class _StatItem extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           value,
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 14,
+            color: Colors.white,
+          ),
         ),
         Text(
           label,
-          style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+          style: const TextStyle(fontSize: 11, color: Colors.white70),
         ),
       ],
     );
@@ -485,13 +569,17 @@ class _InfoRow extends StatelessWidget {
             width: 100,
             child: Text(
               label,
-              style: TextStyle(color: AppColors.textMuted, fontSize: 14),
+              style: const TextStyle(color: Colors.white70, fontSize: 14),
             ),
           ),
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Colors.white,
+              ),
             ),
           ),
         ],

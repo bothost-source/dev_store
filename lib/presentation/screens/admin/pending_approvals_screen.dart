@@ -14,20 +14,30 @@ class PendingApprovalsScreen extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.pendingApprovals)),
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+        title: Text(l10n.pendingApprovals),
+      ),
       body: BlocProvider(
-        create: (_) => AppBloc(context.read())..add(LoadPendingApps()),
+        create: (_) => AppBloc(context.read())..add(const LoadPendingApps()),
         child: BlocConsumer<AppBloc, AppState>(
           listener: (context, state) {
             if (state is AppOperationSuccess) {
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(state.message), backgroundColor: AppColors.success),
+                SnackBar(
+                  content: Text(state.message),
+                  backgroundColor: AppColors.success,
+                ),
               );
-              // Refresh the list after operation
-              context.read<AppBloc>().add(LoadPendingApps());
+              context.read<AppBloc>().add(const LoadPendingApps());
             } else if (state is AppError) {
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(state.message), backgroundColor: Colors.red),
+                SnackBar(
+                  content: Text(state.message),
+                  backgroundColor: Colors.red,
+                ),
               );
             }
           },
@@ -44,13 +54,13 @@ class PendingApprovalsScreen extends StatelessWidget {
                     const SizedBox(height: 16),
                     Text(
                       'Error: ${state.message}',
-                      style: const TextStyle(color: Colors.white, fontSize: 16),
+                      style: const TextStyle(color: Colors.white70, fontSize: 16),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 24),
                     ElevatedButton(
                       onPressed: () {
-                        context.read<AppBloc>().add(LoadPendingApps());
+                        context.read<AppBloc>().add(const LoadPendingApps());
                       },
                       child: const Text('Retry'),
                     ),
@@ -59,10 +69,9 @@ class PendingApprovalsScreen extends StatelessWidget {
               );
             }
             if (state is AppsLoaded) {
-              final pendingApps = state.apps.where((a) => 
-                a.status.toLowerCase() == 'pending' || 
-                a.status.toLowerCase() == 'PENDING'.toLowerCase()
-              ).toList();
+              final pendingApps = state.apps
+                  .where((a) => a.status.toLowerCase() == 'pending')
+                  .toList();
 
               if (pendingApps.isEmpty) {
                 return Center(
@@ -71,9 +80,15 @@ class PendingApprovalsScreen extends StatelessWidget {
                     children: [
                       const Icon(Icons.check_circle, size: 64, color: AppColors.success),
                       const SizedBox(height: 16),
-                      Text('No pending approvals', style: Theme.of(context).textTheme.titleLarge),
+                      Text(
+                        'No pending approvals',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Colors.white),
+                      ),
                       const SizedBox(height: 8),
-                      const Text('All apps have been reviewed', style: TextStyle(color: AppColors.textMuted)),
+                      const Text(
+                        'All apps have been reviewed',
+                        style: TextStyle(color: Colors.white70),
+                      ),
                     ],
                   ),
                 );
@@ -108,6 +123,7 @@ class _PendingAppCard extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
 
     return Card(
+      color: const Color(0xFF1A1A1A),
       margin: const EdgeInsets.only(bottom: 16),
       elevation: 4,
       child: Container(
@@ -117,11 +133,9 @@ class _PendingAppCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            // App info row
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Icon
                 Container(
                   width: 64,
                   height: 64,
@@ -146,7 +160,6 @@ class _PendingAppCard extends StatelessWidget {
                       : const Icon(Icons.android, color: AppColors.primary, size: 32),
                 ),
                 const SizedBox(width: 16),
-                // App details
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -162,8 +175,8 @@ class _PendingAppCard extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(
                         app.developerName,
-                        style: TextStyle(
-                          color: AppColors.textMuted,
+                        style: const TextStyle(
+                          color: Colors.white70,
                           fontSize: 14,
                         ),
                       ),
@@ -189,7 +202,6 @@ class _PendingAppCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
-            // Description
             Text(
               app.description,
               maxLines: 3,
@@ -197,7 +209,6 @@ class _PendingAppCard extends StatelessWidget {
               style: const TextStyle(fontSize: 14, color: Colors.white70),
             ),
             const SizedBox(height: 16),
-            // Action buttons - ALWAYS VISIBLE
             Row(
               children: [
                 Expanded(

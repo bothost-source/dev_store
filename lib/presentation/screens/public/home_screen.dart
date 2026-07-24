@@ -9,7 +9,7 @@ import '../../widgets/section_header.dart';
 import '../../widgets/shimmer_loading.dart';
 import 'app_detail_screen.dart';
 import 'category_apps_screen.dart';
-import 'package:dev_store/core/theme/app_colors.dart';
+import 'package:devstore/core/theme/app_colors.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});

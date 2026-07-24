@@ -53,10 +53,18 @@ class DownloadService {
       throw UnsupportedError('APK installation is only supported on Android');
     }
 
-    final result = await OpenFilex.open(filePath);
+    final file = File(filePath);
+    if (!await file.exists()) {
+      throw Exception('APK file not found at: $filePath');
+    }
 
-    if (result.type != ResultType.done) {
-      throw Exception('Failed to open APK installer: ${result.message}');
+    final result = await OpenFilex.open(
+      filePath,
+      type: 'application/vnd.android.package-archive',
+    );
+
+    if (result.type != ResultType.done && result.type != ResultType.noAppToOpen) {
+      throw Exception('Failed to open APK: ${result.message} (type: ${result.type})');
     }
   }
 
@@ -93,35 +101,46 @@ class DownloadService {
   }) async* {
     final downloadDir = await _getDownloadDirectory();
     final filePath = path.join(downloadDir.path, fileName);
+    final file = File(filePath);
+
+    if (await file.exists()) {
+      await file.delete();
+    }
 
     final progressController = StreamController<double>.broadcast();
-    late final Future<Response> downloadFuture;
 
-    downloadFuture = _dio.download(
-      url,
-      filePath,
-      onReceiveProgress: (received, total) {
-        if (total != -1 && !progressController.isClosed) {
-          progressController.add(received / total);
-        }
-      },
-    );
+    try {
+      final downloadFuture = _dio.download(
+        url,
+        filePath,
+        onReceiveProgress: (received, total) {
+          if (total != -1 && !progressController.isClosed) {
+            progressController.add(received / total);
+          }
+        },
+      );
 
-    await for (final progress in progressController.stream) {
-      yield progress;
-    }
-
-    final response = await downloadFuture;
-
-    if (response.statusCode == 200) {
-      if (!progressController.isClosed) {
-        progressController.add(1.0);
+      await for (final progress in progressController.stream) {
+        yield progress;
       }
-      yield 1.0;
-    } else {
-      throw Exception('Download failed: ${response.statusCode}');
-    }
 
-    await progressController.close();
+      final response = await downloadFuture;
+
+      if (response.statusCode == 200 || response.statusCode == 206) {
+        if (!progressController.isClosed) {
+          progressController.add(1.0);
+        }
+        yield 1.0;
+      } else {
+        throw Exception('Download failed: HTTP ${response.statusCode}');
+      }
+    } catch (e) {
+      if (!progressController.isClosed) {
+        progressController.addError(e);
+      }
+      rethrow;
+    } finally {
+      await progressController.close();
+    }
   }
 }

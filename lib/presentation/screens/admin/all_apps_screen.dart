@@ -12,9 +12,14 @@ class AllAppsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('All Apps')),
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+        title: const Text('All Apps'),
+      ),
       body: BlocProvider(
-        create: (_) => AppBloc(context.read())..add(LoadApps()),
+        create: (_) => AppBloc(context.read())..add(const LoadApps()),
         child: BlocConsumer<AppBloc, AppState>(
           listener: (context, state) {
             if (state is AppOperationSuccess) {
@@ -22,7 +27,7 @@ class AllAppsScreen extends StatelessWidget {
                 SnackBar(content: Text(state.message)),
               );
               // Refresh list after operation
-              context.read<AppBloc>().add(LoadApps());
+              context.read<AppBloc>().add(const LoadApps());
             } else if (state is AppError) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(content: Text(state.message), backgroundColor: Colors.red),
@@ -42,13 +47,13 @@ class AllAppsScreen extends StatelessWidget {
                     const SizedBox(height: 16),
                     Text(
                       'Error: ${state.message}',
-                      style: const TextStyle(color: Colors.white),
+                      style: const TextStyle(color: Colors.white70),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 24),
                     ElevatedButton(
                       onPressed: () {
-                        context.read<AppBloc>().add(LoadApps());
+                        context.read<AppBloc>().add(const LoadApps());
                       },
                       child: const Text('Retry'),
                     ),
@@ -96,6 +101,7 @@ class _AdminAppCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
+      color: const Color(0xFF1A1A1A),
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 2,
       child: InkWell(
@@ -153,8 +159,8 @@ class _AdminAppCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       app.developerName,
-                      style: TextStyle(
-                        color: AppColors.textMuted,
+                      style: const TextStyle(
+                        color: Colors.white70,
                         fontSize: 13,
                       ),
                     ),
@@ -179,6 +185,7 @@ class _AdminAppCard extends StatelessWidget {
               ),
               // Actions menu
               PopupMenuButton<String>(
+                iconColor: Colors.white,
                 onSelected: (value) {
                   if (value == 'feature') {
                     context.read<AppBloc>().add(ToggleFeaturedEvent(app.id, !app.isFeatured));
@@ -196,7 +203,10 @@ class _AdminAppCard extends StatelessWidget {
                           color: Colors.amber,
                         ),
                         const SizedBox(width: 8),
-                        Text(app.isFeatured ? 'Unfeature' : 'Feature'),
+                        Text(
+                          app.isFeatured ? 'Unfeature' : 'Feature',
+                          style: const TextStyle(color: Colors.white),
+                        ),
                       ],
                     ),
                   ),

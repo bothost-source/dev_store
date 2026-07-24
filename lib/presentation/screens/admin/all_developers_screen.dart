@@ -9,7 +9,12 @@ class AllDevelopersScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('All Developers')),
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+        title: const Text('All Developers'),
+      ),
       body: StreamBuilder<List<UserModel>>(
         stream: UserRepository().getDevelopers(),
         builder: (context, snapshot) {
@@ -28,7 +33,7 @@ class AllDevelopersScreen extends StatelessWidget {
                   const SizedBox(height: 16),
                   Text(
                     'Error: ${snapshot.error}',
-                    style: const TextStyle(color: Colors.white),
+                    style: const TextStyle(color: Colors.white70),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 24),
@@ -68,7 +73,10 @@ class AllDevelopersScreen extends StatelessWidget {
                 children: [
                   Icon(Icons.people_outline, size: 64, color: Colors.white24),
                   SizedBox(height: 16),
-                  Text('No developers yet', style: TextStyle(color: Colors.white70, fontSize: 16)),
+                  Text(
+                    'No developers yet',
+                    style: TextStyle(color: Colors.white70, fontSize: 16),
+                  ),
                 ],
               ),
             );
@@ -96,6 +104,7 @@ class _DeveloperCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
+      color: const Color(0xFF1A1A1A),
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 2,
       child: Padding(
@@ -134,8 +143,8 @@ class _DeveloperCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     dev.email,
-                    style: TextStyle(
-                      color: AppColors.textMuted,
+                    style: const TextStyle(
+                      color: Colors.white70,
                       fontSize: 13,
                     ),
                   ),

@@ -4,10 +4,8 @@ import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/helpers.dart';
 import '../../../data/models/app_model.dart';
-import '../../../data/models/review_model.dart';
 import '../../bloc/app_bloc.dart';
 import '../../bloc/download_bloc.dart';
-import '../../widgets/review_card.dart';
 import 'similar_apps_section.dart';
 import 'package:devstore/l10n/app_localizations.dart';
 
@@ -32,7 +30,7 @@ class _AppDetailScreenState extends State<AppDetailScreen> {
       backgroundColor: Colors.black,
       body: CustomScrollView(
         slivers: [
-          // App Bar with icon
+          // App Bar with icon — FIXED: solid black background instead of broken gradient
           SliverAppBar(
             expandedHeight: 200,
             pinned: true,
@@ -40,9 +38,7 @@ class _AppDetailScreenState extends State<AppDetailScreen> {
             foregroundColor: Colors.white,
             flexibleSpace: FlexibleSpaceBar(
               background: Container(
-                decoration: BoxDecoration(
-                  gradient: AppColors.primaryGradient,
-                ),
+                color: Colors.black,
                 child: Center(
                   child: Hero(
                     tag: 'app_icon_${app.id}',
@@ -60,21 +56,7 @@ class _AppDetailScreenState extends State<AppDetailScreen> {
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(24),
-                        child: app.iconUrl.isNotEmpty
-                            ? Image.network(
-                                app.iconUrl,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return Container(
-                                    color: AppColors.primary,
-                                    child: const Icon(Icons.android, size: 50, color: Colors.white),
-                                  );
-                                },
-                              )
-                            : Container(
-                                color: AppColors.primary,
-                                child: const Icon(Icons.android, size: 50, color: Colors.white),
-                              ),
+                        child: _buildImage(app.iconUrl, isIcon: true),
                       ),
                     ),
                   ),
@@ -263,7 +245,7 @@ class _AppDetailScreenState extends State<AppDetailScreen> {
                   ),
                   const SizedBox(height: 24),
 
-                  // Screenshots — VERTICAL STACK
+                  // Screenshots — FIXED: Horizontal scrolling instead of vertical stack
                   if (app.screenshotUrls.isNotEmpty) ...[
                     Text(
                       'Screenshots',
@@ -274,53 +256,29 @@ class _AppDetailScreenState extends State<AppDetailScreen> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    // VERTICAL screenshots instead of carousel
-                    Column(
-                      children: app.screenshotUrls.map((url) {
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          width: double.infinity,
-                          height: 400,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(16),
-                            color: const Color(0xFF1A1A1A),
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(16),
-                            child: Image.network(
-                              url,
-                              fit: BoxFit.cover,
-                              loadingBuilder: (context, child, loadingProgress) {
-                                if (loadingProgress == null) return child;
-                                return Container(
-                                  color: const Color(0xFF1A1A1A),
-                                  child: const Center(
-                                    child: CircularProgressIndicator(
-                                      color: Colors.white24,
-                                    ),
-                                  ),
-                                );
-                              },
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  color: const Color(0xFF1A1A1A),
-                                  child: const Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(Icons.broken_image, color: Colors.white24, size: 48),
-                                      SizedBox(height: 8),
-                                      Text(
-                                        'Image failed to load',
-                                        style: TextStyle(color: Colors.white38),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              },
+                    SizedBox(
+                      height: 400,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: app.screenshotUrls.length,
+                        itemBuilder: (context, index) {
+                          final url = app.screenshotUrls[index];
+                          return Container(
+                            margin: EdgeInsets.only(
+                              right: index < app.screenshotUrls.length - 1 ? 12 : 0,
                             ),
-                          ),
-                        );
-                      }).toList(),
+                            width: MediaQuery.of(context).size.width * 0.7,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(16),
+                              color: const Color(0xFF1A1A1A),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(16),
+                              child: _buildImage(url),
+                            ),
+                          );
+                        },
+                      ),
                     ),
                     const SizedBox(height: 24),
                   ],
@@ -409,11 +367,66 @@ class _AppDetailScreenState extends State<AppDetailScreen> {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  // Reviews list would go here
                   const SizedBox(height: 24),
                 ],
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // UNIFIED image builder with proper error handling
+  Widget _buildImage(String url, {bool isIcon = false}) {
+    if (url.isEmpty) {
+      return _buildPlaceholder(isIcon: isIcon);
+    }
+
+    return Image.network(
+      url,
+      fit: BoxFit.cover,
+      width: double.infinity,
+      height: double.infinity,
+      loadingBuilder: (context, child, loadingProgress) {
+        if (loadingProgress == null) return child;
+        return Container(
+          color: const Color(0xFF1A1A1A),
+          child: Center(
+            child: CircularProgressIndicator(
+              color: Colors.white24,
+              value: loadingProgress.expectedTotalBytes != null
+                  ? loadingProgress.cumulativeBytesLoaded /
+                      loadingProgress.expectedTotalBytes!
+                  : null,
+            ),
+          ),
+        );
+      },
+      errorBuilder: (context, error, stackTrace) {
+        debugPrint('❌ Image failed to load: $url\nError: $error');
+        return _buildPlaceholder(isIcon: isIcon);
+      },
+    );
+  }
+
+  Widget _buildPlaceholder({bool isIcon = false}) {
+    if (isIcon) {
+      return Container(
+        color: AppColors.primary,
+        child: const Icon(Icons.android, size: 50, color: Colors.white),
+      );
+    }
+    return Container(
+      color: const Color(0xFF1A1A1A),
+      child: const Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.broken_image, color: Colors.white24, size: 48),
+          SizedBox(height: 8),
+          Text(
+            'Image failed to load',
+            style: TextStyle(color: Colors.white38),
           ),
         ],
       ),

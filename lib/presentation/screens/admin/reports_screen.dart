@@ -9,7 +9,12 @@ class ReportsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Reports')),
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+        title: const Text('Reports'),
+      ),
       body: StreamBuilder<List<ReportModel>>(
         stream: UserRepository().getAllReports(),
         builder: (context, snapshot) {
@@ -18,7 +23,12 @@ class ReportsScreen extends StatelessWidget {
           }
           final reports = snapshot.data!;
           if (reports.isEmpty) {
-            return const Center(child: Text('No reports yet'));
+            return const Center(
+              child: Text(
+                'No reports yet',
+                style: TextStyle(color: Colors.white70),
+              ),
+            );
           }
           return ListView.builder(
             padding: const EdgeInsets.all(16),
@@ -43,6 +53,7 @@ class _ReportCard extends StatelessWidget {
     Color statusColor = report.status == 'pending' ? AppColors.warning : AppColors.success;
 
     return Card(
+      color: const Color(0xFF1A1A1A),
       margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -52,7 +63,14 @@ class _ReportCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(report.appName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                Text(
+                  report.appName,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: Colors.white,
+                  ),
+                ),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
@@ -61,18 +79,34 @@ class _ReportCard extends StatelessWidget {
                   ),
                   child: Text(
                     report.status.toUpperCase(),
-                    style: TextStyle(color: statusColor, fontSize: 10, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      color: statusColor,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 8),
-            Text('Reported by: ${report.reporterName}', style: TextStyle(color: AppColors.textMuted)),
+            Text(
+              'Reported by: ${report.reporterName}',
+              style: const TextStyle(color: Colors.white70),
+            ),
             const SizedBox(height: 4),
-            Text('Reason: ${report.reason}', style: const TextStyle(fontWeight: FontWeight.w500)),
+            Text(
+              'Reason: ${report.reason}',
+              style: const TextStyle(
+                fontWeight: FontWeight.w500,
+                color: Colors.white,
+              ),
+            ),
             if (report.details != null) ...[
               const SizedBox(height: 4),
-              Text('Details: ${report.details}'),
+              Text(
+                'Details: ${report.details}',
+                style: const TextStyle(color: Colors.white70),
+              ),
             ],
             const SizedBox(height: 12),
             if (report.status == 'pending')
@@ -88,6 +122,10 @@ class _ReportCard extends StatelessWidget {
                   Expanded(
                     child: OutlinedButton(
                       onPressed: () => UserRepository().dismissReport(report.id, 'admin'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        side: const BorderSide(color: Colors.white24),
+                      ),
                       child: const Text('Dismiss'),
                     ),
                   ),

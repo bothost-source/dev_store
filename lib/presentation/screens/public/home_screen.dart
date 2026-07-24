@@ -18,10 +18,10 @@ class HomeScreen extends StatelessWidget {
     return MultiBlocProvider(
       providers: [
         BlocProvider(
-          create: (context) => AppBloc(context.read<AppRepository>())..add(LoadFeaturedApps()),
+          create: (context) => AppBloc(context.read<AppRepository>())..add(const LoadFeaturedApps()),
         ),
         BlocProvider(
-          create: (context) => AppBloc(context.read<AppRepository>())..add(LoadNewReleases()),
+          create: (context) => AppBloc(context.read<AppRepository>())..add(const LoadNewReleases()),
         ),
       ],
       child: Scaffold(
@@ -34,11 +34,12 @@ class HomeScreen extends StatelessWidget {
               expandedHeight: 120,
               backgroundColor: Colors.black,
               foregroundColor: Colors.white,
+              centerTitle: false,
+              title: Text(
+                'DEVSTORE',
+                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+              ),
               flexibleSpace: FlexibleSpaceBar(
-                title: Text(
-                  'DEVSTORE',
-                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
-                ),
                 background: ColoredBox(color: Colors.black),
               ),
             ),
@@ -143,13 +144,55 @@ class _FeaturedAppCard extends StatelessWidget {
       child: Container(
         width: 300,
         margin: const EdgeInsets.only(right: 16),
-        decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), color: const Color(0xFF111111), border: Border.all(color: Colors.white24)),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          color: const Color(0xFF111111),
+          border: Border.all(color: Colors.white24),
+        ),
         child: Stack(
           children: [
             Positioned.fill(
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(20),
-                child: app.iconUrl.isNotEmpty ? Image.network(app.iconUrl, fit: BoxFit.cover, opacity: const AlwaysStoppedAnimation(0.3)) : null,
+                child: app.iconUrl.isNotEmpty
+                    ? Image.network(
+                        app.iconUrl,
+                        fit: BoxFit.cover,
+                        opacity: const AlwaysStoppedAnimation(0.3),
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return Container(color: const Color(0xFF1A1A1A));
+                        },
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            color: AppColors.primary.withOpacity(0.2),
+                            child: const Center(
+                              child: Icon(Icons.android, color: Colors.white24, size: 48),
+                            ),
+                          );
+                        },
+                      )
+                    : Container(
+                        color: AppColors.primary.withOpacity(0.2),
+                        child: const Center(
+                          child: Icon(Icons.android, color: Colors.white24, size: 48),
+                        ),
+                      ),
+              ),
+            ),
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withOpacity(0.8),
+                    ],
+                  ),
+                ),
               ),
             ),
             Padding(
@@ -160,21 +203,50 @@ class _FeaturedAppCard extends StatelessWidget {
                 children: [
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(20)),
-                    child: const Text('FEATURED', style: TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1)),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Text(
+                      'FEATURED',
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1,
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 8),
-                  Text(app.name, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  Text(
+                    app.name,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                   const SizedBox(height: 4),
-                  Text(app.developerName, style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 14)),
+                  Text(
+                    app.developerName,
+                    style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 14),
+                  ),
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      const Icon(Icons.star, color: Colors.white, size: 16),
+                      const Icon(Icons.star, color: Colors.amber, size: 16),
                       const SizedBox(width: 4),
-                      Text(app.averageRating.toStringAsFixed(1), style: const TextStyle(color: Colors.white, fontSize: 14)),
+                      Text(
+                        app.averageRating.toStringAsFixed(1),
+                        style: const TextStyle(color: Colors.white, fontSize: 14),
+                      ),
                       const SizedBox(width: 12),
-                      Text(app.downloadCount.toString(), style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 14)),
+                      Text(
+                        app.downloadCount.toString(),
+                        style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 14),
+                      ),
                       const SizedBox(width: 4),
                       const Text('downloads', style: TextStyle(color: Colors.white70, fontSize: 12)),
                     ],
@@ -206,11 +278,25 @@ class _CategoryChip extends StatelessWidget {
             Container(
               width: 60,
               height: 60,
-              decoration: BoxDecoration(color: const Color(0xFF1A1A1A), borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.white24)),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1A1A1A),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.white24),
+              ),
               child: const Icon(Icons.apps, color: Colors.white, size: 28),
             ),
             const SizedBox(height: 8),
-            Text(category, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Colors.white), textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis),
+            Text(
+              category,
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                color: Colors.white,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
           ],
         ),
       ),

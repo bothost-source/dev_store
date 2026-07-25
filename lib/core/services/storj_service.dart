@@ -58,6 +58,12 @@ class StorjService {
     }
   }
 
+  // NEW: Generate pre-signed URL for public access
+  Future<String> getPresignedUrl(String bucket, String objectPath, {int expirySeconds = 604800}) async {
+    final cleanPath = objectPath.startsWith('/') ? objectPath.substring(1) : objectPath;
+    return await _minio.presignedGetObject(bucket, cleanPath, expires: expirySeconds);
+  }
+
   String getPublicUrl(String bucket, String objectPath) {
     return 'https://link.storjshare.io/s/${AppConstants.storjAccessKey}/$bucket/$objectPath';
   }

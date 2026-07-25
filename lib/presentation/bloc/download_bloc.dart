@@ -77,7 +77,6 @@ class DownloadBloc extends Bloc<DownloadEvent, DownloadState> {
     on<InstallDownloadedApp>(_onInstallApp);
   }
 
-  // FIXED: Simpler await-for instead of emit.forEach
   Future<void> _onStartDownload(StartDownload event, Emitter<DownloadState> emit) async {
     emit(const DownloadInProgress(progress: 0, received: 0, total: 0));
     

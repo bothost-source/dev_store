@@ -3,7 +3,7 @@ import 'package:equatable/equatable.dart';
 import '../../core/services/download_service.dart';
 import '../../data/repositories/app_repository.dart';
 
-// Events
+// ============ EVENTS ============
 abstract class DownloadEvent extends Equatable {
   const DownloadEvent();
   @override
@@ -14,14 +14,18 @@ class StartDownload extends DownloadEvent {
   final String appId;
   final String url;
   final String fileName;
-  const StartDownload({required this.appId, required this.url, required this.fileName});
+  const StartDownload({
+    required this.appId,
+    required this.url,
+    required this.fileName,
+  });
   @override
   List<Object?> get props => [appId, url, fileName];
 }
 
 class CancelDownload extends DownloadEvent {
   final String appId;
-  const CancelDownload(this.appId);
+  const CancelDownload({required this.appId});
   @override
   List<Object?> get props => [appId];
 }
@@ -29,19 +33,22 @@ class CancelDownload extends DownloadEvent {
 class InstallDownloadedApp extends DownloadEvent {
   final String appId;
   final String filePath;
-  const InstallDownloadedApp({required this.appId, required this.filePath});
+  const InstallDownloadedApp({
+    required this.appId,
+    required this.filePath,
+  });
   @override
   List<Object?> get props => [appId, filePath];
 }
 
 class ResetDownload extends DownloadEvent {
   final String appId;
-  const ResetDownload(this.appId);
+  const ResetDownload({required this.appId});
   @override
   List<Object?> get props => [appId];
 }
 
-// States
+// ============ STATES ============
 abstract class DownloadState extends Equatable {
   const DownloadState();
   @override
@@ -52,23 +59,26 @@ class DownloadInitial extends DownloadState {}
 
 class DownloadInProgress extends DownloadState {
   final String appId;
-  final double progress;
-  final int received;
-  final int total;
+  final double progress; // 0.0 to 1.0
+  final int receivedBytes;
+  final int totalBytes;
   const DownloadInProgress({
     required this.appId,
     required this.progress,
-    required this.received,
-    required this.total,
+    required this.receivedBytes,
+    required this.totalBytes,
   });
   @override
-  List<Object?> get props => [appId, progress, received, total];
+  List<Object?> get props => [appId, progress, receivedBytes, totalBytes];
 }
 
 class DownloadCompleted extends DownloadState {
   final String appId;
   final String filePath;
-  const DownloadCompleted({required this.appId, required this.filePath});
+  const DownloadCompleted({
+    required this.appId,
+    required this.filePath,
+  });
   @override
   List<Object?> get props => [appId, filePath];
 }
@@ -76,21 +86,31 @@ class DownloadCompleted extends DownloadState {
 class DownloadError extends DownloadState {
   final String appId;
   final String message;
-  const DownloadError({required this.appId, required this.message});
+  const DownloadError({
+    required this.appId,
+    required this.message,
+  });
   @override
   List<Object?> get props => [appId, message];
 }
 
+class DownloadCancelled extends DownloadState {
+  final String appId;
+  const DownloadCancelled({required this.appId});
+  @override
+  List<Object?> get props => [appId];
+}
+
 class Installing extends DownloadState {
   final String appId;
-  const Installing(this.appId);
+  const Installing({required this.appId});
   @override
   List<Object?> get props => [appId];
 }
 
 class InstallSuccess extends DownloadState {
   final String appId;
-  const InstallSuccess(this.appId);
+  const InstallSuccess({required this.appId});
   @override
   List<Object?> get props => [appId];
 }
@@ -98,12 +118,15 @@ class InstallSuccess extends DownloadState {
 class InstallError extends DownloadState {
   final String appId;
   final String message;
-  const InstallError({required this.appId, required this.message});
+  const InstallError({
+    required this.appId,
+    required this.message,
+  });
   @override
   List<Object?> get props => [appId, message];
 }
 
-// BLoC
+// ============ BLoC ============
 class DownloadBloc extends Bloc<DownloadEvent, DownloadState> {
   final DownloadService _downloadService;
   final AppRepository _appRepository;
@@ -116,43 +139,57 @@ class DownloadBloc extends Bloc<DownloadEvent, DownloadState> {
   }
 
   Future<void> _onStartDownload(StartDownload event, Emitter<DownloadState> emit) async {
-    emit(DownloadInProgress(appId: event.appId, progress: 0, received: 0, total: 100));
-    
+    emit(DownloadInProgress(
+      appId: event.appId,
+      progress: 0,
+      receivedBytes: 0,
+      totalBytes: 0,
+    ));
+
     try {
-      await for (final progress in _downloadService.downloadWithProgress(
+      await for (final downloadProgress in _downloadService.downloadWithProgress(
         url: event.url,
         fileName: event.fileName,
+        appId: event.appId,
       )) {
         emit(DownloadInProgress(
           appId: event.appId,
-          progress: progress,
-          received: (progress * 100).toInt(),
-          total: 100,
+          progress: downloadProgress.progress,
+          receivedBytes: downloadProgress.receivedBytes,
+          totalBytes: downloadProgress.totalBytes,
         ));
       }
 
       final filePath = await _downloadService.getDownloadedFilePath(event.fileName);
-      if (filePath != null) {
+
+      if (filePath != null && filePath.isNotEmpty) {
         await _appRepository.incrementDownloadCount(event.appId);
         emit(DownloadCompleted(appId: event.appId, filePath: filePath));
       } else {
-        emit(DownloadError(appId: event.appId, message: 'Download failed: file not found'));
+        emit(DownloadError(
+          appId: event.appId,
+          message: 'Download failed: file not found',
+        ));
       }
     } catch (e) {
-      emit(DownloadError(appId: event.appId, message: e.toString()));
+      if (e.toString().contains('cancelled')) {
+        emit(DownloadCancelled(appId: event.appId));
+      } else {
+        emit(DownloadError(appId: event.appId, message: e.toString()));
+      }
     }
   }
 
   Future<void> _onCancelDownload(CancelDownload event, Emitter<DownloadState> emit) async {
-    // Cancel the current download
-    emit(DownloadInitial());
+    _downloadService.cancelDownload(event.appId);
+    emit(DownloadCancelled(appId: event.appId));
   }
 
   Future<void> _onInstallApp(InstallDownloadedApp event, Emitter<DownloadState> emit) async {
-    emit(Installing(event.appId));
+    emit(Installing(appId: event.appId));
     try {
       await _downloadService.installApk(event.filePath);
-      emit(InstallSuccess(event.appId));
+      emit(InstallSuccess(appId: event.appId));
     } catch (e) {
       emit(InstallError(appId: event.appId, message: e.toString()));
     }

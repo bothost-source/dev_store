@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import '../models/app_model.dart';
 import '../models/review_model.dart';
+import '../models/report_model.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/services/storj_service.dart';
 
@@ -276,5 +277,73 @@ class AppRepository {
   Future<void> deleteReview(String reviewId, String appId) async {
     await _firestore.collection(AppConstants.reviewsCollection).doc(reviewId).delete();
     await updateAppRating(appId);
+  }
+
+  // ========== REPORTS ==========
+
+  /// Submit a report for an app (from the store app)
+  Future<void> reportApp({
+    required String appId,
+    required String appName,
+    required String reason,
+    String? reporterId,
+    String? reporterName,
+  }) async {
+    await _firestore.collection('reports').add({
+      'appId': appId,
+      'appName': appName,
+      'reporterId': reporterId ?? 'anonymous',
+      'reporterName': reporterName ?? 'Anonymous',
+      'reason': reason,
+      'details': null,
+      'status': 'pending',
+      'createdAt': Timestamp.fromDate(DateTime.now()),
+      'resolvedAt': null,
+      'resolvedBy': null,
+      'resolution': null,
+    });
+  }
+
+  /// Get all reports (for admin panel)
+  Stream<List<ReportModel>> getAllReports() {
+    return _firestore
+        .collection('reports')
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) => ReportModel.fromFirestore(doc)).toList();
+    });
+  }
+
+  /// Get pending reports (for admin panel)
+  Stream<List<ReportModel>> getPendingReports() {
+    return _firestore
+        .collection('reports')
+        .where('status', isEqualTo: 'pending')
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) => ReportModel.fromFirestore(doc)).toList();
+    });
+  }
+
+  /// Resolve a report (for admin panel)
+  Future<void> resolveReport(String reportId, String resolvedBy, String resolution) async {
+    await _firestore.collection('reports').doc(reportId).update({
+      'status': 'resolved',
+      'resolvedAt': Timestamp.fromDate(DateTime.now()),
+      'resolvedBy': resolvedBy,
+      'resolution': resolution,
+    });
+  }
+
+  /// Dismiss a report (for admin panel)
+  Future<void> dismissReport(String reportId, String dismissedBy) async {
+    await _firestore.collection('reports').doc(reportId).update({
+      'status': 'dismissed',
+      'resolvedAt': Timestamp.fromDate(DateTime.now()),
+      'resolvedBy': dismissedBy,
+      'resolution': 'Dismissed by admin',
+    });
   }
 }

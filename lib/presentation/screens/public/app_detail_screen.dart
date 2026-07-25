@@ -4,6 +4,7 @@ import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/helpers.dart';
 import '../../../data/models/app_model.dart';
+import '../../../data/repositories/app_repository.dart';
 import '../../bloc/download_bloc.dart';
 import 'similar_apps_section.dart';
 import 'package:devstore/l10n/app_localizations.dart';

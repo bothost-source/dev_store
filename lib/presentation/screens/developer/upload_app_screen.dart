@@ -73,21 +73,21 @@ class _UploadAppScreenState extends State<UploadAppScreen> {
   }
 
   Future<void> _uploadApp() async {
-  if (!_formKey.currentState!.validate()) return;
-  if (_apkFile == null) {
-    _showSnackBar('Please select an APK file');
-    return;
-  }
-  if (_iconFile == null) {
-    _showSnackBar('Please select an app icon');
-    return;
-  }
+    if (!_formKey.currentState!.validate()) return;
+    if (_apkFile == null) {
+      _showSnackBar('Please select an APK file');
+      return;
+    }
+    if (_iconFile == null) {
+      _showSnackBar('Please select an app icon');
+      return;
+    }
 
-  final apkSize = await _apkFile!.length();
-  if (apkSize > AppConstants.maxApkSize) {
-    _showSnackBar('APK file is too large (max 500MB)');
-    return;
-  }
+    final apkSize = await _apkFile!.length();
+    if (apkSize > AppConstants.maxApkSize) {
+      _showSnackBar('APK file is too large (max 500MB)');
+      return;
+    }
     
     setState(() => _isUploading = true);
 
@@ -101,34 +101,56 @@ class _UploadAppScreenState extends State<UploadAppScreen> {
 
       final bucket = await _storjService.getAvailableBucket();
 
+      // Upload APK
       setState(() => _uploadProgress = 0.1);
-      final apkPath = await _storjService.uploadFile(
+      await _storjService.uploadFile(
         file: _apkFile!,
         folder: '${AppConstants.pendingFolder}/$appId',
         fileName: 'app.apk',
         specificBucket: bucket,
       );
 
+      // Upload icon
       setState(() => _uploadProgress = 0.3);
-      final iconPath = await _storjService.uploadFile(
+      await _storjService.uploadFile(
         file: _iconFile!,
         folder: '${AppConstants.pendingFolder}/$appId',
         fileName: 'icon.png',
         specificBucket: bucket,
       );
 
-      final screenshotUrls = <String>[];
+      // Upload screenshots
+      setState(() => _uploadProgress = 0.5);
       for (var i = 0; i < _screenshots.length; i++) {
-        setState(() => _uploadProgress = 0.3 + (0.4 * (i / _screenshots.length)));
-        final ssPath = await _storjService.uploadFile(
+        setState(() => _uploadProgress = 0.5 + (0.2 * (i / _screenshots.length)));
+        await _storjService.uploadFile(
           file: _screenshots[i],
           folder: '${AppConstants.pendingFolder}/$appId/screenshots',
           fileName: 'ss_$i.jpg',
           specificBucket: bucket,
         );
-        final parts = ssPath.split('/');
-        screenshotUrls.add(_storjService.getPublicUrl(parts[0], parts.sublist(1).join('/')));
       }
+
+      // GENERATE PRE-SIGNED URLs
+      setState(() => _uploadProgress = 0.75);
+      final iconPresignedUrl = await _storjService.getPresignedUrl(
+        bucket,
+        '${AppConstants.pendingFolder}/$appId/icon.png',
+      );
+
+      final screenshotPresignedUrls = <String>[];
+      for (var i = 0; i < _screenshots.length; i++) {
+        final url = await _storjService.getPresignedUrl(
+          bucket,
+          '${AppConstants.pendingFolder}/$appId/screenshots/ss_$i.jpg',
+        );
+        screenshotPresignedUrls.add(url);
+      }
+
+      final apkPresignedUrl = await _storjService.getPresignedUrl(
+        bucket,
+        '${AppConstants.pendingFolder}/$appId/app.apk',
+      );
 
       final tags = _tagsController.text.split(',').map((t) => t.trim()).where((t) => t.isNotEmpty).toList();
 
@@ -145,12 +167,12 @@ class _UploadAppScreenState extends State<UploadAppScreen> {
         version: _versionController.text.trim(),
         minAndroidVersion: _minAndroidController.text.trim(),
         apkSize: apkSize,
-        iconUrl: _storjService.getPublicUrl(bucket, '${AppConstants.pendingFolder}/$appId/icon.png'),
-        screenshotUrls: screenshotUrls,
-        apkUrl: _storjService.getPublicUrl(bucket, '${AppConstants.pendingFolder}/$appId/app.apk'),
+        iconUrl: iconPresignedUrl,
+        screenshotUrls: screenshotPresignedUrls,
+        apkUrl: apkPresignedUrl,
         status: AppConstants.statusPending,
         bucket: bucket,
-        storagePath: apkPath,
+        storagePath: '$bucket/${AppConstants.pendingFolder}/$appId/app.apk',
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
@@ -178,7 +200,6 @@ class _UploadAppScreenState extends State<UploadAppScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
 
-    // SUCCESS SCREEN
     if (_uploadSuccess) {
       return Scaffold(
         backgroundColor: Colors.black,
@@ -331,8 +352,8 @@ class _UploadAppScreenState extends State<UploadAppScreen> {
 
   InputDecoration _inputDecoration(String label, IconData icon, {String? hint}) {
     return InputDecoration(
-      filled: true,                                    // ADD THIS
-      fillColor: const Color(0xFF1A1A1A),            // ADD THIS
+      filled: true,
+      fillColor: const Color(0xFF1A1A1A),
       labelText: label,
       hintText: hint,
       labelStyle: const TextStyle(color: Colors.white70),

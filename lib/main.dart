@@ -11,7 +11,6 @@ import 'data/repositories/app_repository.dart';
 import 'presentation/providers/theme_provider.dart';
 import 'presentation/providers/locale_provider.dart';
 import 'presentation/bloc/auth_bloc.dart';
-import 'presentation/bloc/download_bloc.dart';
 import 'presentation/screens/splash_screen.dart';
 import 'package:devstore/l10n/app_localizations.dart';
 
@@ -32,18 +31,8 @@ void main() async {
         RepositoryProvider.value(value: appRepository),
         RepositoryProvider.value(value: downloadService),
       ],
-      child: MultiBlocProvider(
-        providers: [
-          BlocProvider(
-            create: (context) => AuthBloc(authService)..add(AppStarted()),
-          ),
-          BlocProvider(
-            create: (context) => DownloadBloc(
-              context.read<DownloadService>(),
-              context.read<AppRepository>(),
-            ),
-          ),
-        ],
+      child: BlocProvider(
+        create: (context) => AuthBloc(authService)..add(AppStarted()),
         child: const DevStoreApp(),
       ),
     ),

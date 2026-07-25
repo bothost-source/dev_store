@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/models/report_model.dart';
-import '../../../data/repositories/user_repository.dart';
+import '../../../data/repositories/app_repository.dart';
 
 class ReportsScreen extends StatelessWidget {
   const ReportsScreen({super.key});
@@ -16,13 +17,12 @@ class ReportsScreen extends StatelessWidget {
         title: const Text('Reports'),
       ),
       body: StreamBuilder<List<ReportModel>>(
-        stream: UserRepository().getAllReports(),
+        stream: context.read<AppRepository>().getAllReports(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
-          final reports = snapshot.data!;
-          if (reports.isEmpty) {
+          if (!snapshot.hasData || snapshot.data!.isEmpty) {
             return const Center(
               child: Text(
                 'No reports yet',
@@ -30,6 +30,7 @@ class ReportsScreen extends StatelessWidget {
               ),
             );
           }
+          final reports = snapshot.data!;
           return ListView.builder(
             padding: const EdgeInsets.all(16),
             itemCount: reports.length,
@@ -51,6 +52,7 @@ class _ReportCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Color statusColor = report.status == 'pending' ? AppColors.warning : AppColors.success;
+    if (report.status == 'dismissed') statusColor = Colors.grey;
 
     return Card(
       color: const Color(0xFF1A1A1A),
@@ -63,14 +65,18 @@ class _ReportCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  report.appName,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    color: Colors.white,
+                Expanded(
+                  child: Text(
+                    report.appName,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: Colors.white,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
+                const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
@@ -101,7 +107,7 @@ class _ReportCard extends StatelessWidget {
                 color: Colors.white,
               ),
             ),
-            if (report.details != null) ...[
+            if (report.details != null && report.details!.isNotEmpty) ...[
               const SizedBox(height: 4),
               Text(
                 'Details: ${report.details}',
@@ -114,14 +120,55 @@ class _ReportCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: () => UserRepository().resolveReport(report.id, 'admin', 'Resolved'),
+                      onPressed: () async {
+                        try {
+                          await context.read<AppRepository>().resolveReport(
+                            report.id,
+                            'admin',
+                            'Resolved',
+                          );
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Report resolved'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        } catch (e) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Error: $e'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      },
                       child: const Text('Resolve'),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: () => UserRepository().dismissReport(report.id, 'admin'),
+                      onPressed: () async {
+                        try {
+                          await context.read<AppRepository>().dismissReport(
+                            report.id,
+                            'admin',
+                          );
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Report dismissed'),
+                              backgroundColor: Colors.grey,
+                            ),
+                          );
+                        } catch (e) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Error: $e'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      },
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.white,
                         side: const BorderSide(color: Colors.white24),

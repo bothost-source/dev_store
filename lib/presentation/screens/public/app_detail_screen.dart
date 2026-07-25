@@ -30,52 +30,50 @@ class _AppDetailScreenState extends State<AppDetailScreen> {
       backgroundColor: Colors.black,
       body: CustomScrollView(
         slivers: [
-          // FIXED: Smaller app bar, no gray box, solid black background
+          // FIXED: Simple app bar with icon, no gray blank area
           SliverAppBar(
-            expandedHeight: 140,
             pinned: true,
             backgroundColor: Colors.black,
             foregroundColor: Colors.white,
-            flexibleSpace: FlexibleSpaceBar(
-              background: Container(
-                color: Colors.black,
-                child: Center(
-                  child: Container(
-                    width: 72,
-                    height: 72,
-                    decoration: BoxDecoration(
-                      color: AppColors.primary,
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(18),
-                      child: app.iconUrl.isNotEmpty
-                        ? Image.network(
-                            app.iconUrl,
-                            fit: BoxFit.cover,
-                            loadingBuilder: (context, child, loadingProgress) {
-                              if (loadingProgress == null) return child;
-                              return Container(
-                                color: AppColors.primary,
-                                child: const Icon(Icons.android, size: 36, color: Colors.white),
-                              );
-                            },
-                            errorBuilder: (context, error, stackTrace) {
-                              debugPrint('Icon error: $error');
-                              return Container(
-                                color: AppColors.primary,
-                                child: const Icon(Icons.android, size: 36, color: Colors.white),
-                              );
-                            },
-                          )
-                        : Container(
-                            color: AppColors.primary,
-                            child: const Icon(Icons.android, size: 36, color: Colors.white),
-                          ),
-                    ),
+            expandedHeight: 0,
+            toolbarHeight: 80,
+            title: Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: app.iconUrl.isNotEmpty
+                      ? Image.network(
+                          app.iconUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => const Icon(Icons.android, size: 24, color: Colors.white),
+                        )
+                      : const Icon(Icons.android, size: 24, color: Colors.white),
                   ),
                 ),
-              ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        app.name,
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                      Text(
+                        app.developerName,
+                        style: const TextStyle(fontSize: 12, color: Colors.white70),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
 
@@ -86,31 +84,10 @@ class _AppDetailScreenState extends State<AppDetailScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Category chip
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              app.name,
-                              style: const TextStyle(
-                                fontSize: 28,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              app.developerName,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                color: Colors.white70,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
@@ -162,100 +139,81 @@ class _AppDetailScreenState extends State<AppDetailScreen> {
                   ),
                   const SizedBox(height: 24),
 
-                  // Action Buttons
-                  Row(
-                    children: [
-                      Expanded(
-                        child: BlocConsumer<DownloadBloc, DownloadState>(
-                          listener: (context, state) {
-                            if (state is DownloadCompleted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(l10n.downloadComplete),
-                                  backgroundColor: Colors.black,
+                  // FIXED: Download button always visible with text
+                  SizedBox(
+                    width: double.infinity,
+                    child: BlocConsumer<DownloadBloc, DownloadState>(
+                      listener: (context, state) {
+                        if (state is DownloadCompleted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(l10n.downloadComplete), backgroundColor: Colors.black),
+                          );
+                        } else if (state is DownloadError) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(state.message), backgroundColor: Colors.red),
+                          );
+                        } else if (state is InstallSuccess) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('App installed successfully!'), backgroundColor: Colors.black),
+                          );
+                        }
+                      },
+                      builder: (context, state) {
+                        if (state is DownloadInProgress) {
+                          return Column(
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: LinearProgressIndicator(
+                                  value: state.progress,
+                                  backgroundColor: Colors.white24,
+                                  valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                                  minHeight: 8,
                                 ),
-                              );
-                            } else if (state is DownloadError) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(state.message),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
-                            } else if (state is InstallSuccess) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('App installed successfully!'),
-                                  backgroundColor: Colors.black,
-                                ),
-                              );
-                            }
-                          },
-                          builder: (context, state) {
-                            if (state is DownloadInProgress) {
-                              return Column(
-                                children: [
-                                  LinearProgressIndicator(
-                                    value: state.progress,
-                                    backgroundColor: Colors.white24,
-                                    valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    '${(state.progress * 100).toStringAsFixed(0)}%',
-                                    style: const TextStyle(color: Colors.white),
-                                  ),
-                                ],
-                              );
-                            }
-                            if (state is DownloadCompleted) {
-                              return ElevatedButton.icon(
-                                onPressed: () {
-                                  context.read<DownloadBloc>().add(
-                                    InstallDownloadedApp(state.filePath),
-                                  );
-                                },
-                                icon: const Icon(Icons.install_mobile),
-                                label: Text(l10n.install),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.success,
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(vertical: 14),
-                                ),
-                              );
-                            }
-                            return ElevatedButton.icon(
-                              onPressed: () {
-                                context.read<DownloadBloc>().add(StartDownload(
-                                  appId: app.id,
-                                  url: app.apkUrl,
-                                  fileName: '${app.packageName}_${app.version}.apk',
-                                ));
-                              },
-                              icon: const Icon(Icons.download),
-                              label: Text(l10n.install),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.primary,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 14),
                               ),
-                            );
+                              const SizedBox(height: 8),
+                              Text(
+                                '${(state.progress * 100).toStringAsFixed(0)}%',
+                                style: const TextStyle(color: Colors.white, fontSize: 14),
+                              ),
+                            ],
+                          );
+                        }
+                        if (state is DownloadCompleted) {
+                          return ElevatedButton.icon(
+                            onPressed: () {
+                              context.read<DownloadBloc>().add(InstallDownloadedApp(state.filePath));
+                            },
+                            icon: const Icon(Icons.install_mobile, color: Colors.white),
+                            label: Text(l10n.install, style: const TextStyle(color: Colors.white, fontSize: 16)),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.success,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                          );
+                        }
+                        return ElevatedButton.icon(
+                          onPressed: () {
+                            debugPrint('🚀 Download started: ${app.apkUrl}');
+                            context.read<DownloadBloc>().add(StartDownload(
+                              appId: app.id,
+                              url: app.apkUrl,
+                              fileName: '${app.packageName}_${app.version}.apk',
+                            ));
                           },
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      IconButton(
-                        onPressed: () => _showReportDialog(context),
-                        icon: const Icon(Icons.flag_outlined, color: Colors.white70),
-                        tooltip: l10n.reportApp,
-                      ),
-                      IconButton(
-                        onPressed: () {
-                          // Share app
-                        },
-                        icon: const Icon(Icons.share_outlined, color: Colors.white70),
-                      ),
-                    ],
+                          icon: const Icon(Icons.download, color: Colors.white),
+                          label: Text(l10n.install, style: const TextStyle(color: Colors.white, fontSize: 16)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                        );
+                      },
+                    ),
                   ),
                   const SizedBox(height: 24),
 

@@ -3,7 +3,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../data/models/app_model.dart';
 import '../../../data/repositories/app_repository.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/services/download_service.dart';
 import '../../bloc/app_bloc.dart';
+import '../../bloc/download_bloc.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/section_header.dart';
 import '../../widgets/shimmer_loading.dart';
@@ -126,10 +128,25 @@ class HomeScreen extends StatelessWidget {
           itemCount: apps.length,
           itemBuilder: (context, index) => AppCard(
             app: apps[index],
-            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => AppDetailScreen(app: apps[index]))),
+            onTap: () => _navigateToAppDetail(context, apps[index]),
           ),
         ),
       ],
+    );
+  }
+
+  // FIXED: Navigate with per-app DownloadBloc
+  void _navigateToAppDetail(BuildContext context, AppModel app) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => BlocProvider(
+          create: (context) => DownloadBloc(
+            context.read<DownloadService>(),
+            context.read<AppRepository>(),
+          ),
+          child: AppDetailScreen(app: app),
+        ),
+      ),
     );
   }
 }
@@ -141,7 +158,7 @@ class _FeaturedAppCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => AppDetailScreen(app: app))),
+      onTap: () => const HomeScreen()._navigateToAppDetail(context, app),
       child: Container(
         width: 300,
         margin: const EdgeInsets.only(right: 16),

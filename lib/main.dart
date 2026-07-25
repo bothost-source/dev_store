@@ -11,6 +11,7 @@ import 'data/repositories/app_repository.dart';
 import 'presentation/providers/theme_provider.dart';
 import 'presentation/providers/locale_provider.dart';
 import 'presentation/bloc/auth_bloc.dart';
+import 'presentation/bloc/download_bloc.dart';
 import 'presentation/screens/splash_screen.dart';
 import 'package:devstore/l10n/app_localizations.dart';
 
@@ -19,11 +20,11 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  
+
   final authService = AuthService();
   final appRepository = AppRepository();
   final downloadService = DownloadService();
-  
+
   runApp(
     MultiRepositoryProvider(
       providers: [
@@ -31,8 +32,18 @@ void main() async {
         RepositoryProvider.value(value: appRepository),
         RepositoryProvider.value(value: downloadService),
       ],
-      child: BlocProvider(
-        create: (context) => AuthBloc(authService)..add(AppStarted()),
+      child: MultiBlocProvider(
+        providers: [
+          BlocProvider(
+            create: (context) => AuthBloc(authService)..add(AppStarted()),
+          ),
+          BlocProvider(
+            create: (context) => DownloadBloc(
+              context.read<DownloadService>(),
+              context.read<AppRepository>(),
+            ),
+          ),
+        ],
         child: const DevStoreApp(),
       ),
     ),

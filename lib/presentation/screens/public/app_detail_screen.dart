@@ -30,7 +30,7 @@ class _AppDetailScreenState extends State<AppDetailScreen> {
       backgroundColor: Colors.black,
       body: CustomScrollView(
         slivers: [
-          // FIXED: Simple app bar with icon, no gray blank area
+          // Simple app bar with icon, no gray blank area
           SliverAppBar(
             pinned: true,
             backgroundColor: Colors.black,
@@ -139,9 +139,10 @@ class _AppDetailScreenState extends State<AppDetailScreen> {
                   ),
                   const SizedBox(height: 24),
 
-                  // FIXED: Download button always visible with text
-                  SizedBox(
+                  // Download button with progress indicator
+                  Container(
                     width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 8),
                     child: BlocConsumer<DownloadBloc, DownloadState>(
                       listener: (context, state) {
                         if (state is DownloadCompleted) {
@@ -150,53 +151,79 @@ class _AppDetailScreenState extends State<AppDetailScreen> {
                           );
                         } else if (state is DownloadError) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text(state.message), backgroundColor: Colors.red),
+                            SnackBar(content: Text('Error: ${state.message}'), backgroundColor: Colors.red),
                           );
                         } else if (state is InstallSuccess) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('App installed successfully!'), backgroundColor: Colors.black),
+                            const SnackBar(content: Text('Installed!'), backgroundColor: Colors.green),
                           );
                         }
                       },
                       builder: (context, state) {
+                        // Show progress bar during download
                         if (state is DownloadInProgress) {
-                          return Column(
-                            children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: LinearProgressIndicator(
-                                  value: state.progress,
-                                  backgroundColor: Colors.white24,
-                                  valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
-                                  minHeight: 8,
+                          return Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF1A1A1A),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: LinearProgressIndicator(
+                                    value: state.progress,
+                                    backgroundColor: Colors.white24,
+                                    valueColor: const AlwaysStoppedAnimation<Color>(Colors.green),
+                                    minHeight: 8,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                '${(state.progress * 100).toStringAsFixed(0)}%',
-                                style: const TextStyle(color: Colors.white, fontSize: 14),
-                              ),
-                            ],
+                                const SizedBox(height: 12),
+                                Text(
+                                  'Downloading... ${(state.progress * 100).toStringAsFixed(0)}%',
+                                  style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${state.received} MB / ${state.total} MB',
+                                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                                ),
+                              ],
+                            ),
                           );
                         }
+
+                        // Show install button after download
                         if (state is DownloadCompleted) {
                           return ElevatedButton.icon(
                             onPressed: () {
                               context.read<DownloadBloc>().add(InstallDownloadedApp(state.filePath));
                             },
                             icon: const Icon(Icons.install_mobile, color: Colors.white),
-                            label: Text(l10n.install, style: const TextStyle(color: Colors.white, fontSize: 16)),
+                            label: const Text('Install Now', style: TextStyle(color: Colors.white, fontSize: 16)),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.success,
+                              backgroundColor: Colors.green,
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             ),
                           );
                         }
+
+                        // Default: Download button
                         return ElevatedButton.icon(
                           onPressed: () {
-                            debugPrint('🚀 Download started: ${app.apkUrl}');
+                            // Visual feedback immediately
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Starting download...'),
+                                duration: Duration(milliseconds: 500),
+                                backgroundColor: Colors.black,
+                              ),
+                            );
+                            
                             context.read<DownloadBloc>().add(StartDownload(
                               appId: app.id,
                               url: app.apkUrl,
@@ -204,7 +231,7 @@ class _AppDetailScreenState extends State<AppDetailScreen> {
                             ));
                           },
                           icon: const Icon(Icons.download, color: Colors.white),
-                          label: Text(l10n.install, style: const TextStyle(color: Colors.white, fontSize: 16)),
+                          label: const Text('Download & Install', style: TextStyle(color: Colors.white, fontSize: 16)),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primary,
                             foregroundColor: Colors.white,

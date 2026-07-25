@@ -4,7 +4,6 @@ import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/helpers.dart';
 import '../../../data/models/app_model.dart';
-import '../../bloc/app_bloc.dart';
 import '../../bloc/download_bloc.dart';
 import 'similar_apps_section.dart';
 import 'package:devstore/l10n/app_localizations.dart';
@@ -30,7 +29,6 @@ class _AppDetailScreenState extends State<AppDetailScreen> {
       backgroundColor: Colors.black,
       body: CustomScrollView(
         slivers: [
-          // Simple app bar with icon, no gray blank area
           SliverAppBar(
             pinned: true,
             backgroundColor: Colors.black,
@@ -77,14 +75,12 @@ class _AppDetailScreenState extends State<AppDetailScreen> {
             ),
           ),
 
-          // App Info
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.all(20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Category chip
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
@@ -107,7 +103,6 @@ class _AppDetailScreenState extends State<AppDetailScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Stats Row
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
@@ -139,112 +134,146 @@ class _AppDetailScreenState extends State<AppDetailScreen> {
                   ),
                   const SizedBox(height: 24),
 
-                  // Download button with progress indicator
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: BlocConsumer<DownloadBloc, DownloadState>(
-                      listener: (context, state) {
-                        if (state is DownloadCompleted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text(l10n.downloadComplete), backgroundColor: Colors.black),
-                          );
-                        } else if (state is DownloadError) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Error: ${state.message}'), backgroundColor: Colors.red),
-                          );
-                        } else if (state is InstallSuccess) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Installed!'), backgroundColor: Colors.green),
-                          );
-                        }
-                      },
-                      builder: (context, state) {
-                        // Show progress bar during download
-                        if (state is DownloadInProgress) {
-                          return Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF1A1A1A),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: LinearProgressIndicator(
-                                    value: state.progress,
-                                    backgroundColor: Colors.white24,
-                                    valueColor: const AlwaysStoppedAnimation<Color>(Colors.green),
-                                    minHeight: 8,
+                  Row(
+                    children: [
+                      Expanded(
+                        flex: 3,
+                        child: BlocConsumer<DownloadBloc, DownloadState>(
+                          listener: (context, state) {
+                            if (state is DownloadCompleted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Download complete!'), backgroundColor: Colors.green),
+                              );
+                            } else if (state is DownloadError) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Error: ${state.message}'), backgroundColor: Colors.red),
+                              );
+                            } else if (state is InstallSuccess) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Installed successfully!'), backgroundColor: Colors.green),
+                              );
+                            }
+                          },
+                          builder: (context, state) {
+                            if (state is DownloadInProgress) {
+                              return Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF1A1A1A),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: LinearProgressIndicator(
+                                        value: state.progress,
+                                        backgroundColor: Colors.white24,
+                                        valueColor: const AlwaysStoppedAnimation<Color>(Colors.green),
+                                        minHeight: 8,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      'Downloading... ${(state.progress * 100).toStringAsFixed(0)}%',
+                                      style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    TextButton.icon(
+                                      onPressed: () {
+                                        context.read<DownloadBloc>().add(CancelDownload(app.id));
+                                      },
+                                      icon: const Icon(Icons.cancel, color: Colors.red, size: 18),
+                                      label: const Text('Cancel', style: TextStyle(color: Colors.red, fontSize: 14)),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }
+
+                            if (state is DownloadCompleted) {
+                              return ElevatedButton.icon(
+                                onPressed: () {
+                                  context.read<DownloadBloc>().add(
+                                    InstallDownloadedApp(appId: app.id, filePath: state.filePath),
+                                  );
+                                },
+                                icon: const Icon(Icons.install_mobile, color: Colors.white),
+                                label: const Text('Install Now', style: TextStyle(color: Colors.white, fontSize: 16)),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.green,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  minimumSize: const Size(double.infinity, 50),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                              );
+                            }
+
+                            if (state is Installing) {
+                              return Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF1A1A1A),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    CircularProgressIndicator(color: Colors.green, strokeWidth: 2),
+                                    SizedBox(width: 12),
+                                    Text('Installing...', style: TextStyle(color: Colors.white)),
+                                  ],
+                                ),
+                              );
+                            }
+
+                            return ElevatedButton.icon(
+                              onPressed: () {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Starting download...'),
+                                    duration: Duration(milliseconds: 800),
+                                    backgroundColor: Colors.black,
                                   ),
-                                ),
-                                const SizedBox(height: 12),
-                                Text(
-                                  'Downloading... ${(state.progress * 100).toStringAsFixed(0)}%',
-                                  style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  '${state.received} MB / ${state.total} MB',
-                                  style: const TextStyle(color: Colors.white70, fontSize: 12),
-                                ),
-                              ],
-                            ),
-                          );
-                        }
-
-                        // Show install button after download
-                        if (state is DownloadCompleted) {
-                          return ElevatedButton.icon(
-                            onPressed: () {
-                              context.read<DownloadBloc>().add(InstallDownloadedApp(state.filePath));
-                            },
-                            icon: const Icon(Icons.install_mobile, color: Colors.white),
-                            label: const Text('Install Now', style: TextStyle(color: Colors.white, fontSize: 16)),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            ),
-                          );
-                        }
-
-                        // Default: Download button
-                        return ElevatedButton.icon(
-                          onPressed: () {
-                            // Visual feedback immediately
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Starting download...'),
-                                duration: Duration(milliseconds: 500),
-                                backgroundColor: Colors.black,
+                                );
+                                context.read<DownloadBloc>().add(StartDownload(
+                                  appId: app.id,
+                                  url: app.apkUrl,
+                                  fileName: '${app.packageName}_${app.version}.apk',
+                                ));
+                              },
+                              icon: const Icon(Icons.download, color: Colors.white),
+                              label: const Text(
+                                'Download & Install',
+                                style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                minimumSize: const Size(double.infinity, 50),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                               ),
                             );
-                            
-                            context.read<DownloadBloc>().add(StartDownload(
-                              appId: app.id,
-                              url: app.apkUrl,
-                              fileName: '${app.packageName}_${app.version}.apk',
-                            ));
                           },
-                          icon: const Icon(Icons.download, color: Colors.white),
-                          label: const Text('Download & Install', style: TextStyle(color: Colors.white, fontSize: 16)),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          ),
-                        );
-                      },
-                    ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        onPressed: () => _showReportDialog(context),
+                        icon: const Icon(Icons.flag_outlined, color: Colors.white70),
+                        tooltip: l10n.reportApp,
+                      ),
+                      IconButton(
+                        onPressed: () {},
+                        icon: const Icon(Icons.share_outlined, color: Colors.white70),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 24),
 
-                  // Screenshots — HORIZONTAL SCROLLING
                   if (app.screenshotUrls.isNotEmpty) ...[
                     Text(
                       'Screenshots',
@@ -281,14 +310,11 @@ class _AppDetailScreenState extends State<AppDetailScreen> {
                                   return Container(
                                     color: const Color(0xFF1A1A1A),
                                     child: const Center(
-                                      child: CircularProgressIndicator(
-                                        color: Colors.white24,
-                                      ),
+                                      child: CircularProgressIndicator(color: Colors.white24),
                                     ),
                                   );
                                 },
                                 errorBuilder: (context, error, stackTrace) {
-                                  debugPrint('Screenshot error: $error');
                                   return Container(
                                     color: const Color(0xFF1A1A1A),
                                     child: const Column(
@@ -296,10 +322,7 @@ class _AppDetailScreenState extends State<AppDetailScreen> {
                                       children: [
                                         Icon(Icons.broken_image, color: Colors.white24, size: 48),
                                         SizedBox(height: 8),
-                                        Text(
-                                          'Image failed to load',
-                                          style: TextStyle(color: Colors.white38),
-                                        ),
+                                        Text('Image failed to load', style: TextStyle(color: Colors.white38)),
                                       ],
                                     ),
                                   );
@@ -313,7 +336,6 @@ class _AppDetailScreenState extends State<AppDetailScreen> {
                     const SizedBox(height: 24),
                   ],
 
-                  // Description
                   Text(
                     l10n.description,
                     style: const TextStyle(
@@ -349,7 +371,6 @@ class _AppDetailScreenState extends State<AppDetailScreen> {
                     ),
                   const SizedBox(height: 24),
 
-                  // Tags
                   if (app.tags.isNotEmpty) ...[
                     Wrap(
                       spacing: 8,
@@ -365,17 +386,14 @@ class _AppDetailScreenState extends State<AppDetailScreen> {
                     const SizedBox(height: 24),
                   ],
 
-                  // Version Info
                   _InfoRow(label: 'Version', value: app.version),
                   _InfoRow(label: 'Package', value: app.packageName),
                   _InfoRow(label: 'Updated', value: Helpers.formatDate(app.updatedAt)),
                   const SizedBox(height: 24),
 
-                  // Similar Apps
                   SimilarAppsSection(appId: app.id, category: app.category),
                   const SizedBox(height: 24),
 
-                  // Reviews Section
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -452,53 +470,71 @@ class _AppDetailScreenState extends State<AppDetailScreen> {
 
   void _showWriteReviewDialog(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    double rating = 5;
+    double currentRating = 5;
     final commentController = TextEditingController();
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
-        title: Text(l10n.writeReview, style: const TextStyle(color: Colors.white)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            RatingBar.builder(
-              initialRating: 5,
-              minRating: 1,
-              direction: Axis.horizontal,
-              allowHalfRating: true,
-              itemCount: 5,
-              itemBuilder: (context, _) => const Icon(Icons.star, color: Colors.amber),
-              onRatingUpdate: (value) => rating = value,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            backgroundColor: const Color(0xFF1A1A1A),
+            title: Text(l10n.writeReview, style: const TextStyle(color: Colors.white)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  currentRating.toStringAsFixed(1),
+                  style: const TextStyle(color: Colors.amber, fontSize: 32, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                RatingBar.builder(
+                  initialRating: 5,
+                  minRating: 1,
+                  direction: Axis.horizontal,
+                  allowHalfRating: true,
+                  itemCount: 5,
+                  itemSize: 32,
+                  itemBuilder: (context, _) => const Icon(Icons.star, color: Colors.amber),
+                  onRatingUpdate: (value) {
+                    setDialogState(() {
+                      currentRating = value;
+                    });
+                  },
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: commentController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(
+                    labelText: 'Your review',
+                    hintText: 'Share your experience...',
+                    labelStyle: TextStyle(color: Colors.white70),
+                    hintStyle: TextStyle(color: Colors.white38),
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 3,
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: commentController,
-              style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(
-                labelText: 'Your review',
-                hintText: 'Share your experience...',
-                labelStyle: TextStyle(color: Colors.white70),
-                hintStyle: TextStyle(color: Colors.white38),
-                border: OutlineInputBorder(),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(l10n.cancel, style: const TextStyle(color: Colors.white70)),
               ),
-              maxLines: 3,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(l10n.cancel, style: const TextStyle(color: Colors.white70)),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            child: Text(l10n.submit),
-          ),
-        ],
+              ElevatedButton(
+                onPressed: () {
+                  debugPrint('Rating: $currentRating, Comment: ${commentController.text}');
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Review submitted!'), backgroundColor: Colors.green),
+                  );
+                },
+                child: Text(l10n.submit),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

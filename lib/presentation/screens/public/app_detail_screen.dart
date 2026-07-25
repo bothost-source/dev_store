@@ -30,9 +30,9 @@ class _AppDetailScreenState extends State<AppDetailScreen> {
       backgroundColor: Colors.black,
       body: CustomScrollView(
         slivers: [
-          // App Bar with icon — FIXED: solid black background instead of broken gradient
+          // FIXED: Smaller app bar, no gray box, solid black background
           SliverAppBar(
-            expandedHeight: 200,
+            expandedHeight: 140,
             pinned: true,
             backgroundColor: Colors.black,
             foregroundColor: Colors.white,
@@ -40,24 +40,38 @@ class _AppDetailScreenState extends State<AppDetailScreen> {
               background: Container(
                 color: Colors.black,
                 child: Center(
-                  child: Hero(
-                    tag: 'app_icon_${app.id}',
-                    child: Container(
-                      width: 100,
-                      height: 100,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(24),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.2),
-                            blurRadius: 20,
+                  child: Container(
+                    width: 72,
+                    height: 72,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(18),
+                      child: app.iconUrl.isNotEmpty
+                        ? Image.network(
+                            app.iconUrl,
+                            fit: BoxFit.cover,
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return Container(
+                                color: AppColors.primary,
+                                child: const Icon(Icons.android, size: 36, color: Colors.white),
+                              );
+                            },
+                            errorBuilder: (context, error, stackTrace) {
+                              debugPrint('Icon error: $error');
+                              return Container(
+                                color: AppColors.primary,
+                                child: const Icon(Icons.android, size: 36, color: Colors.white),
+                              );
+                            },
+                          )
+                        : Container(
+                            color: AppColors.primary,
+                            child: const Icon(Icons.android, size: 36, color: Colors.white),
                           ),
-                        ],
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(24),
-                        child: _buildImage(app.iconUrl, isIcon: true),
-                      ),
                     ),
                   ),
                 ),
@@ -245,7 +259,7 @@ class _AppDetailScreenState extends State<AppDetailScreen> {
                   ),
                   const SizedBox(height: 24),
 
-                  // Screenshots — FIXED: Horizontal scrolling instead of vertical stack
+                  // Screenshots — HORIZONTAL SCROLLING
                   if (app.screenshotUrls.isNotEmpty) ...[
                     Text(
                       'Screenshots',
@@ -274,7 +288,38 @@ class _AppDetailScreenState extends State<AppDetailScreen> {
                             ),
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(16),
-                              child: _buildImage(url),
+                              child: Image.network(
+                                url,
+                                fit: BoxFit.cover,
+                                loadingBuilder: (context, child, loadingProgress) {
+                                  if (loadingProgress == null) return child;
+                                  return Container(
+                                    color: const Color(0xFF1A1A1A),
+                                    child: const Center(
+                                      child: CircularProgressIndicator(
+                                        color: Colors.white24,
+                                      ),
+                                    ),
+                                  );
+                                },
+                                errorBuilder: (context, error, stackTrace) {
+                                  debugPrint('Screenshot error: $error');
+                                  return Container(
+                                    color: const Color(0xFF1A1A1A),
+                                    child: const Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.broken_image, color: Colors.white24, size: 48),
+                                        SizedBox(height: 8),
+                                        Text(
+                                          'Image failed to load',
+                                          style: TextStyle(color: Colors.white38),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              ),
                             ),
                           );
                         },
@@ -371,62 +416,6 @@ class _AppDetailScreenState extends State<AppDetailScreen> {
                 ],
               ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // UNIFIED image builder with proper error handling
-  Widget _buildImage(String url, {bool isIcon = false}) {
-    if (url.isEmpty) {
-      return _buildPlaceholder(isIcon: isIcon);
-    }
-
-    return Image.network(
-      url,
-      fit: BoxFit.cover,
-      width: double.infinity,
-      height: double.infinity,
-      loadingBuilder: (context, child, loadingProgress) {
-        if (loadingProgress == null) return child;
-        return Container(
-          color: const Color(0xFF1A1A1A),
-          child: Center(
-            child: CircularProgressIndicator(
-              color: Colors.white24,
-              value: loadingProgress.expectedTotalBytes != null
-                  ? loadingProgress.cumulativeBytesLoaded /
-                      loadingProgress.expectedTotalBytes!
-                  : null,
-            ),
-          ),
-        );
-      },
-      errorBuilder: (context, error, stackTrace) {
-        debugPrint('❌ Image failed to load: $url\nError: $error');
-        return _buildPlaceholder(isIcon: isIcon);
-      },
-    );
-  }
-
-  Widget _buildPlaceholder({bool isIcon = false}) {
-    if (isIcon) {
-      return Container(
-        color: AppColors.primary,
-        child: const Icon(Icons.android, size: 50, color: Colors.white),
-      );
-    }
-    return Container(
-      color: const Color(0xFF1A1A1A),
-      child: const Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.broken_image, color: Colors.white24, size: 48),
-          SizedBox(height: 8),
-          Text(
-            'Image failed to load',
-            style: TextStyle(color: Colors.white38),
           ),
         ],
       ),

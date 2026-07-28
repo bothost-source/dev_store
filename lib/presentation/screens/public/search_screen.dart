@@ -67,9 +67,9 @@ class _SearchScreenState extends State<SearchScreen> {
 
     if (query.isEmpty) return;
 
-    _debounceTimer = Timer(const Duration(milliseconds: 300), () {
+    _debounceTimer = Timer(const Duration(milliseconds: 500), () {
       _saveRecentSearch(query);
-      context.read<AppBloc>().add(LoadApps(searchQuery: query));
+      context.read<AppBloc>().add(SearchApps(query));
     });
   }
 
@@ -83,124 +83,121 @@ class _SearchScreenState extends State<SearchScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
 
-    return BlocProvider(
-      create: (context) => AppBloc(context.read<AppRepository>()),
-      child: Scaffold(
-        backgroundColor: Colors.black,
-        body: SafeArea(
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: TextField(
-                  controller: _searchController,
-                  onChanged: _onSearchChanged,
-                  style: const TextStyle(color: Colors.white),
-                  decoration: InputDecoration(
-                    hintText: l10n.search,
-                    hintStyle: const TextStyle(color: Colors.white70),
-                    prefixIcon: const Icon(Icons.search, color: Colors.white70),
-                    suffixIcon: _searchQuery.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear, color: Colors.white70),
-                            onPressed: () {
-                              _searchController.clear();
-                              setState(() => _searchQuery = '');
-                            },
-                          )
-                        : null,
-                    filled: true,
-                    fillColor: const Color(0xFF1A1A1A),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Colors.white24),
-                    ),
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: TextField(
+                controller: _searchController,
+                onChanged: _onSearchChanged,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  hintText: l10n.search,
+                  hintStyle: const TextStyle(color: Colors.white70),
+                  prefixIcon: const Icon(Icons.search, color: Colors.white70),
+                  suffixIcon: _searchQuery.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear, color: Colors.white70),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() => _searchQuery = '');
+                          },
+                        )
+                      : null,
+                  filled: true,
+                  fillColor: const Color(0xFF1A1A1A),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Colors.white24),
                   ),
                 ),
               ),
-              if (_searchQuery.isEmpty) ...[
-                ListTile(
-                  leading: const Icon(Icons.trending_up, color: Colors.white),
-                  title: const Text('Top Charts', style: TextStyle(color: Colors.white)),
-                  trailing: const Icon(Icons.chevron_right, color: Colors.white70),
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const TopChartsScreen()),
-                    );
-                  },
-                ),
-                const Divider(color: Colors.white24),
-              ],
-              Expanded(
-                child: _searchQuery.isEmpty
-                    ? _RecentSearches(
-                        recentSearches: _recentSearches,
-                        onRecentTap: _onRecentTap,
-                        onClear: _clearRecentSearches,
-                      )
-                    : BlocBuilder<AppBloc, AppState>(
-                        builder: (context, state) {
-                          if (state is AppLoading) {
-                            return const ShimmerAppList();
-                          }
-                          if (state is AppError) {
+            ),
+            if (_searchQuery.isEmpty) ...[
+              ListTile(
+                leading: const Icon(Icons.trending_up, color: Colors.white),
+                title: const Text('Top Charts', style: TextStyle(color: Colors.white)),
+                trailing: const Icon(Icons.chevron_right, color: Colors.white70),
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const TopChartsScreen()),
+                  );
+                },
+              ),
+              const Divider(color: Colors.white24),
+            ],
+            Expanded(
+              child: _searchQuery.isEmpty
+                  ? _RecentSearches(
+                      recentSearches: _recentSearches,
+                      onRecentTap: _onRecentTap,
+                      onClear: _clearRecentSearches,
+                    )
+                  : BlocBuilder<AppBloc, AppState>(
+                      builder: (context, state) {
+                        if (state is AppLoading) {
+                          return const ShimmerAppList();
+                        }
+                        if (state is AppError) {
+                          return Center(
+                            child: Text(
+                              'Error: ${state.message}',
+                              style: const TextStyle(color: Colors.white),
+                            ),
+                          );
+                        }
+                        if (state is AppsLoaded) {
+                          if (state.apps.isEmpty) {
                             return Center(
-                              child: Text(
-                                'Error: ${state.message}',
-                                style: const TextStyle(color: Colors.white),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Icons.search_off, size: 64, color: Colors.white70),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    l10n.noAppsFound,
+                                    style: const TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
                               ),
                             );
                           }
-                          if (state is AppsLoaded) {
-                            if (state.apps.isEmpty) {
-                              return Center(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    const Icon(Icons.search_off, size: 64, color: Colors.white70),
-                                    const SizedBox(height: 16),
-                                    Text(
-                                      l10n.noAppsFound,
-                                      style: const TextStyle(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                          return ListView.builder(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            itemCount: state.apps.length,
+                            itemBuilder: (context, index) {
+                              final app = state.apps[index];
+                              return AppCard(
+                                app: app,
+                                onTap: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(builder: (_) => AppDetailScreen(app: app)),
+                                  );
+                                },
                               );
-                            }
-                            return ListView.builder(
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
-                              itemCount: state.apps.length,
-                              itemBuilder: (context, index) {
-                                final app = state.apps[index];
-                                return AppCard(
-                                  app: app,
-                                  onTap: () {
-                                    Navigator.of(context).push(
-                                      MaterialPageRoute(builder: (_) => AppDetailScreen(app: app)),
-                                    );
-                                  },
-                                );
-                              },
-                            );
-                          }
-                          return const SizedBox.shrink();
-                        },
-                      ),
-              ),
-            ],
-          ),
+                            },
+                          );
+                        }
+                        return const SizedBox.shrink();
+                      },
+                    ),
+            ),
+          ],
         ),
       ),
     );

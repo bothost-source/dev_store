@@ -279,6 +279,36 @@ class AppRepository {
     await updateAppRating(appId);
   }
 
+  // Search apps by name (case-insensitive contains search)
+  Future<List<AppModel>> searchApps(String query) async {
+    final snapshot = await _firestore
+        .collection(AppConstants.appsCollection)
+        .where('status', isEqualTo: AppConstants.statusApproved)
+        .get();
+
+    final apps = snapshot.docs.map((doc) => AppModel.fromFirestore(doc)).toList();
+
+    // Filter in Dart for case-insensitive contains search
+    final lowerQuery = query.toLowerCase();
+    final filtered = apps.where((app) {
+      return app.name.toLowerCase().contains(lowerQuery) ||
+             app.developerName.toLowerCase().contains(lowerQuery) ||
+             app.category.toLowerCase().contains(lowerQuery) ||
+             app.tags.any((tag) => tag.toLowerCase().contains(lowerQuery));
+    }).toList();
+
+    // Sort by relevance: name matches first, then others
+    filtered.sort((a, b) {
+      final aNameMatch = a.name.toLowerCase().startsWith(lowerQuery);
+      final bNameMatch = b.name.toLowerCase().startsWith(lowerQuery);
+      if (aNameMatch && !bNameMatch) return -1;
+      if (!aNameMatch && bNameMatch) return 1;
+      return b.downloadCount.compareTo(a.downloadCount);
+    });
+
+    return filtered;
+  }
+
   // ========== REPORTS ==========
 
   /// Submit a report for an app (from the store app)

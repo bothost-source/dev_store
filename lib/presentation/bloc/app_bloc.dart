@@ -15,6 +15,8 @@ class LoadApps extends AppEvent {
   final String? searchQuery;
   final String sortBy;
   const LoadApps({this.category, this.searchQuery, this.sortBy = 'createdAt'});
+  @override
+  List<Object?> get props => [category, searchQuery, sortBy];
 }
 
 class LoadFeaturedApps extends AppEvent {
@@ -47,6 +49,13 @@ class LoadSimilarApps extends AppEvent {
 class LoadDeveloperApps extends AppEvent {
   final String developerId;
   const LoadDeveloperApps(this.developerId);
+}
+
+class SearchApps extends AppEvent {
+  final String query;
+  const SearchApps(this.query);
+  @override
+  List<Object?> get props => [query];
 }
 
 class ApproveAppEvent extends AppEvent {
@@ -120,6 +129,7 @@ class AppBloc extends Bloc<AppEvent, AppState> {
     on<LoadAppDetail>(_onLoadAppDetail);
     on<LoadSimilarApps>(_onLoadSimilarApps);
     on<LoadDeveloperApps>(_onLoadDeveloperApps);
+    on<SearchApps>(_onSearchApps);
     on<ApproveAppEvent>(_onApproveApp);
     on<RejectAppEvent>(_onRejectApp);
     on<ToggleFeaturedEvent>(_onToggleFeatured);
@@ -137,6 +147,21 @@ class AppBloc extends Bloc<AppEvent, AppState> {
       onData: (apps) => AppsLoaded(apps),
       onError: (error, stackTrace) => AppError(error.toString()),
     );
+  }
+
+  Future<void> _onSearchApps(SearchApps event, Emitter<AppState> emit) async {
+    if (event.query.trim().isEmpty) {
+      emit(const AppsLoaded([]));
+      return;
+    }
+
+    emit(AppLoading());
+    try {
+      final apps = await _repository.searchApps(event.query.trim());
+      emit(AppsLoaded(apps));
+    } catch (e) {
+      emit(AppError(e.toString()));
+    }
   }
 
   Future<void> _onLoadFeaturedApps(LoadFeaturedApps event, Emitter<AppState> emit) async {

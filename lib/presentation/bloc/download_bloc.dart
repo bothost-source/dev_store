@@ -52,25 +52,27 @@ class ResetDownload extends DownloadEvent {
   List<Object?> get props => [appId];
 }
 
-class UpdateDownloadProgress extends DownloadEvent {
+class _UpdateProgress extends DownloadEvent {
   final String appId;
   final double progress;
   final int receivedBytes;
   final int totalBytes;
-  const UpdateDownloadProgress({
+  final double speedKbps;
+  const _UpdateProgress({
     required this.appId,
     required this.progress,
     required this.receivedBytes,
     required this.totalBytes,
+    this.speedKbps = 0,
   });
   @override
-  List<Object?> get props => [appId, progress, receivedBytes, totalBytes];
+  List<Object?> get props => [appId, progress, receivedBytes, totalBytes, speedKbps];
 }
 
-class DownloadCompleteEvent extends DownloadEvent {
+class _DownloadComplete extends DownloadEvent {
   final String appId;
   final String filePath;
-  const DownloadCompleteEvent({
+  const _DownloadComplete({
     required this.appId,
     required this.filePath,
   });
@@ -78,10 +80,10 @@ class DownloadCompleteEvent extends DownloadEvent {
   List<Object?> get props => [appId, filePath];
 }
 
-class DownloadErrorEvent extends DownloadEvent {
+class _DownloadError extends DownloadEvent {
   final String appId;
   final String message;
-  const DownloadErrorEvent({
+  const _DownloadError({
     required this.appId,
     required this.message,
   });
@@ -89,9 +91,9 @@ class DownloadErrorEvent extends DownloadEvent {
   List<Object?> get props => [appId, message];
 }
 
-class DownloadCancelledEvent extends DownloadEvent {
+class _DownloadCancelled extends DownloadEvent {
   final String appId;
-  const DownloadCancelledEvent({required this.appId});
+  const _DownloadCancelled({required this.appId});
   @override
   List<Object?> get props => [appId];
 }
@@ -131,6 +133,7 @@ class AppDownloadState extends Equatable {
   final double progress;
   final int receivedBytes;
   final int totalBytes;
+  final double speedKbps; // Download speed in KB/s
   final String? filePath;
   final String? errorMessage;
 
@@ -142,6 +145,7 @@ class AppDownloadState extends Equatable {
     this.progress = 0,
     this.receivedBytes = 0,
     this.totalBytes = 0,
+    this.speedKbps = 0,
     this.filePath,
     this.errorMessage,
   });
@@ -153,6 +157,7 @@ class AppDownloadState extends Equatable {
     double? progress,
     int? receivedBytes,
     int? totalBytes,
+    double? speedKbps,
     String? filePath,
     String? errorMessage,
   }) {
@@ -164,6 +169,7 @@ class AppDownloadState extends Equatable {
       progress: progress ?? this.progress,
       receivedBytes: receivedBytes ?? this.receivedBytes,
       totalBytes: totalBytes ?? this.totalBytes,
+      speedKbps: speedKbps ?? this.speedKbps,
       filePath: filePath ?? this.filePath,
       errorMessage: errorMessage ?? this.errorMessage,
     );
@@ -191,10 +197,10 @@ class DownloadBloc extends Bloc<DownloadEvent, DownloadState> {
     on<CancelDownload>(_onCancelDownload);
     on<InstallDownloadedApp>(_onInstallApp);
     on<ResetDownload>(_onResetDownload);
-    on<UpdateDownloadProgress>(_onUpdateProgress);
-    on<DownloadCompleteEvent>(_onDownloadComplete);
-    on<DownloadErrorEvent>(_onDownloadError);
-    on<DownloadCancelledEvent>(_onDownloadCancelled);
+    on<_UpdateProgress>(_onUpdateProgress);
+    on<_DownloadComplete>(_onDownloadComplete);
+    on<_DownloadError>(_onDownloadError);
+    on<_DownloadCancelled>(_onDownloadCancelled);
   }
 
   Map<String, AppDownloadState> _getCurrentMap() {
@@ -214,58 +220,67 @@ class DownloadBloc extends Bloc<DownloadEvent, DownloadState> {
       progress: 0,
       receivedBytes: 0,
       totalBytes: 0,
+      speedKbps: 0,
     );
     emit(DownloadsMapState(downloads: downloads));
 
+    int lastReceived = 0;
+    DateTime lastTime = DateTime.now();
+
     try {
-      await for (final downloadProgress in _downloadService.downloadWithProgress(
+      final filePath = await _downloadService.downloadApk(
         url: event.url,
         fileName: event.fileName,
         appId: event.appId,
-      )) {
-        add(UpdateDownloadProgress(
-          appId: event.appId,
-          progress: downloadProgress.progress,
-          receivedBytes: downloadProgress.receivedBytes,
-          totalBytes: downloadProgress.totalBytes,
-        ));
-      }
+        onProgress: (received, total) {
+          final now = DateTime.now();
+          final elapsed = now.difference(lastTime).inMilliseconds;
+          double speed = 0;
+          if (elapsed > 0) {
+            final bytesDelta = received - lastReceived;
+            speed = (bytesDelta / 1024) / (elapsed / 1000); // KB/s
+          }
+          lastReceived = received;
+          lastTime = now;
 
-      final filePath = await _downloadService.getDownloadedFilePath(event.fileName);
+          // Called directly from Dio's onReceiveProgress - real progress
+          add(_UpdateProgress(
+            appId: event.appId,
+            progress: total > 0 ? received / total : 0,
+            receivedBytes: received,
+            totalBytes: total,
+            speedKbps: speed,
+          ));
+        },
+      );
 
-      if (filePath != null && filePath.isNotEmpty) {
-        await _appRepository.incrementDownloadCount(event.appId);
-        add(DownloadCompleteEvent(appId: event.appId, filePath: filePath));
-      } else {
-        add(DownloadErrorEvent(
-          appId: event.appId,
-          message: 'Download failed: file not found',
-        ));
-      }
+      await _appRepository.incrementDownloadCount(event.appId);
+      add(_DownloadComplete(appId: event.appId, filePath: filePath));
     } catch (e) {
-      if (e.toString().contains('cancelled')) {
-        add(DownloadCancelledEvent(appId: event.appId));
+      if (e.toString().contains('cancelled') || e.toString().contains('Cancel')) {
+        add(_DownloadCancelled(appId: event.appId));
       } else {
-        add(DownloadErrorEvent(appId: event.appId, message: e.toString()));
+        add(_DownloadError(appId: event.appId, message: e.toString()));
       }
     }
   }
 
-  void _onUpdateProgress(UpdateDownloadProgress event, Emitter<DownloadState> emit) {
+  void _onUpdateProgress(_UpdateProgress event, Emitter<DownloadState> emit) {
     final downloads = _getCurrentMap();
     final current = downloads[event.appId];
-    if (current != null) {
+    if (current != null && current.isDownloading) {
       downloads[event.appId] = current.copyWith(
         status: 'downloading',
         progress: event.progress,
         receivedBytes: event.receivedBytes,
         totalBytes: event.totalBytes,
+        speedKbps: event.speedKbps,
       );
       emit(DownloadsMapState(downloads: downloads));
     }
   }
 
-  void _onDownloadComplete(DownloadCompleteEvent event, Emitter<DownloadState> emit) {
+  void _onDownloadComplete(_DownloadComplete event, Emitter<DownloadState> emit) {
     final downloads = _getCurrentMap();
     final current = downloads[event.appId];
     if (current != null) {
@@ -278,7 +293,7 @@ class DownloadBloc extends Bloc<DownloadEvent, DownloadState> {
     }
   }
 
-  void _onDownloadError(DownloadErrorEvent event, Emitter<DownloadState> emit) {
+  void _onDownloadError(_DownloadError event, Emitter<DownloadState> emit) {
     final downloads = _getCurrentMap();
     final current = downloads[event.appId];
     if (current != null) {
@@ -290,7 +305,7 @@ class DownloadBloc extends Bloc<DownloadEvent, DownloadState> {
     }
   }
 
-  void _onDownloadCancelled(DownloadCancelledEvent event, Emitter<DownloadState> emit) {
+  void _onDownloadCancelled(_DownloadCancelled event, Emitter<DownloadState> emit) {
     final downloads = _getCurrentMap();
     final current = downloads[event.appId];
     if (current != null) {
@@ -304,12 +319,6 @@ class DownloadBloc extends Bloc<DownloadEvent, DownloadState> {
 
   Future<void> _onCancelDownload(CancelDownload event, Emitter<DownloadState> emit) async {
     _downloadService.cancelDownload(event.appId);
-    final downloads = _getCurrentMap();
-    final current = downloads[event.appId];
-    if (current != null) {
-      downloads[event.appId] = current.copyWith(status: 'cancelled');
-      emit(DownloadsMapState(downloads: downloads));
-    }
   }
 
   Future<void> _onInstallApp(InstallDownloadedApp event, Emitter<DownloadState> emit) async {

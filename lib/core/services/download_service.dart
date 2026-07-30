@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
@@ -23,11 +22,27 @@ class DownloadService {
     return downloadDir;
   }
 
-  /// Downloads with progress callback. Returns filePath on success.
+  /// Get file size from URL via HEAD request
+  Future<int> _getFileSize(String url) async {
+    try {
+      final response = await _dio.head(url);
+      final contentLength = response.headers.value('content-length');
+      if (contentLength != null) {
+        return int.parse(contentLength);
+      }
+    } catch (e) {
+      // HEAD request failed, will use unknown size
+    }
+    return 0;
+  }
+
+  /// Downloads an APK with progress callbacks.
+  /// [onProgress] is called with (receivedBytes, totalBytes) periodically.
+  /// If totalBytes is 0, the server didn't report size - progress will be indeterminate.
   Future<String> downloadApk({
     required String url,
     required String fileName,
-    required Function(int received, int total) onProgress,
+    required void Function(int received, int total) onProgress,
     String? appId,
   }) async {
     final downloadDir = await _getDownloadDirectory();
@@ -38,127 +53,46 @@ class DownloadService {
       await file.delete();
     }
 
+    // Try to get file size first
+    int totalBytes = await _getFileSize(url);
+    int receivedBytes = 0;
+
     final cancelToken = CancelToken();
     if (appId != null) {
       _activeTokens[appId] = cancelToken;
     }
 
     try {
-      await _dio.download(
+      final response = await _dio.get(
         url,
-        filePath,
         cancelToken: cancelToken,
+        options: Options(
+          responseType: ResponseType.bytes,
+          followRedirects: true,
+        ),
         onReceiveProgress: (received, total) {
-          if (total != -1) {
-            onProgress(received, total);
+          // Dio's total might be -1 if Content-Length not available
+          // Use our pre-fetched total if available
+          if (total != -1 && total > 0) {
+            totalBytes = total;
           }
+          receivedBytes = received;
+          onProgress(receivedBytes, totalBytes);
         },
       );
+
+      // Write the bytes to file
+      await file.writeAsBytes(response.data as List<int>);
+
+      // Final progress update
+      receivedBytes = await file.length();
+      onProgress(receivedBytes, totalBytes > 0 ? totalBytes : receivedBytes);
 
       return filePath;
     } finally {
       if (appId != null) {
         _activeTokens.remove(appId);
       }
-    }
-  }
-
-  /// Stream-based download with proper cancel support and intermediate progress
-  Stream<DownloadProgress> downloadWithProgress({
-    required String url,
-    required String fileName,
-    String? appId,
-  }) async* {
-    final downloadDir = await _getDownloadDirectory();
-    final filePath = path.join(downloadDir.path, fileName);
-    final file = File(filePath);
-
-    if (await file.exists()) {
-      await file.delete();
-    }
-
-    final cancelToken = CancelToken();
-    if (appId != null) {
-      _activeTokens[appId] = cancelToken;
-    }
-
-    // Use a StreamController to bridge Dio's callback-based progress to a stream
-    final controller = StreamController<DownloadProgress>.broadcast();
-
-    // Track latest progress
-    int latestReceived = 0;
-    int latestTotal = 0;
-    Timer? progressTimer;
-
-    try {
-      // Start the download
-      final downloadFuture = _dio.download(
-        url,
-        filePath,
-        cancelToken: cancelToken,
-        onReceiveProgress: (received, total) {
-          if (total != -1) {
-            latestReceived = received;
-            latestTotal = total;
-          }
-        },
-      );
-
-      // Emit progress every 200ms while downloading
-      progressTimer = Timer.periodic(const Duration(milliseconds: 200), (timer) {
-        if (!controller.isClosed && latestTotal > 0) {
-          controller.add(DownloadProgress(
-            receivedBytes: latestReceived,
-            totalBytes: latestTotal,
-            progress: latestReceived / latestTotal,
-          ));
-        }
-      });
-
-      // Wait for download to complete
-      await downloadFuture;
-
-      // Cancel timer and emit final progress
-      progressTimer.cancel();
-      if (!controller.isClosed) {
-        controller.add(DownloadProgress(
-          receivedBytes: latestReceived,
-          totalBytes: latestTotal,
-          progress: 1.0,
-        ));
-      }
-
-      await controller.close();
-    } on DioException catch (e) {
-      progressTimer?.cancel();
-      if (CancelToken.isCancel(e)) {
-        if (!controller.isClosed) {
-          controller.addError(Exception('Download cancelled by user'));
-          await controller.close();
-        }
-        throw Exception('Download cancelled by user');
-      }
-      if (!controller.isClosed) {
-        controller.addError(e);
-        await controller.close();
-      }
-      rethrow;
-    } catch (e) {
-      progressTimer?.cancel();
-      if (!controller.isClosed) {
-        controller.addError(e);
-        await controller.close();
-      }
-      rethrow;
-    } finally {
-      if (appId != null) {
-        _activeTokens.remove(appId);
-      }
-    }
-
-    // Yield all progress events from the controller
-    await for (final progress in controller.stream) {
-      yield progress;
     }
   }
 
@@ -216,16 +150,4 @@ class DownloadService {
       await file.delete();
     }
   }
-}
-
-class DownloadProgress {
-  final int receivedBytes;
-  final int totalBytes;
-  final double progress;
-
-  const DownloadProgress({
-    required this.receivedBytes,
-    required this.totalBytes,
-    required this.progress,
-  });
 }

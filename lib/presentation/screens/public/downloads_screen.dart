@@ -160,7 +160,11 @@ class _DownloadCard extends StatelessWidget {
     Widget? actionButton;
 
     if (download.isDownloading) {
-      statusText = 'Downloading... ${(download.progress * 100).toStringAsFixed(0)}%';
+      final hasTotal = download.totalBytes > 0;
+      final speedStr = download.speedKbps > 0 ? ' • ${download.speedKbps.toStringAsFixed(1)} KB/s' : '';
+      statusText = hasTotal
+        ? 'Downloading... ${(download.progress * 100).toStringAsFixed(0)}%$speedStr'
+        : 'Downloading...$speedStr';
       statusColor = Colors.blue;
       actionButton = TextButton.icon(
         onPressed: onCancel,
@@ -285,12 +289,18 @@ class _DownloadCard extends StatelessWidget {
               const SizedBox(height: 12),
               ClipRRect(
                 borderRadius: BorderRadius.circular(8),
-                child: LinearProgressIndicator(
-                  value: download.progress,
-                  backgroundColor: Colors.white24,
-                  valueColor: const AlwaysStoppedAnimation<Color>(Colors.green),
-                  minHeight: 6,
-                ),
+                child: download.totalBytes > 0
+                  ? LinearProgressIndicator(
+                      value: download.progress,
+                      backgroundColor: Colors.white24,
+                      valueColor: const AlwaysStoppedAnimation<Color>(Colors.green),
+                      minHeight: 6,
+                    )
+                  : const LinearProgressIndicator(
+                      backgroundColor: Colors.white24,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
+                      minHeight: 6,
+                    ),
               ),
             ],
             if (actionButton != null) ...[

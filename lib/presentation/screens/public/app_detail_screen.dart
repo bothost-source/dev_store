@@ -187,9 +187,14 @@ class _AppDetailScreenState extends State<AppDetailScreen> {
 
                             // Downloading in progress
                             if (appState != null && appState.isDownloading) {
-                              final percent = (appState.progress * 100).toStringAsFixed(0);
+                              final hasTotal = appState.totalBytes > 0;
+                              final percent = hasTotal 
+                                ? (appState.progress * 100).toStringAsFixed(0)
+                                : null;
                               final receivedStr = _formatBytes(appState.receivedBytes);
-                              final totalStr = _formatBytes(appState.totalBytes);
+                              final totalStr = hasTotal 
+                                ? _formatBytes(appState.totalBytes)
+                                : null;
 
                               return Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -202,30 +207,51 @@ class _AppDetailScreenState extends State<AppDetailScreen> {
                                   children: [
                                     ClipRRect(
                                       borderRadius: BorderRadius.circular(8),
-                                      child: LinearProgressIndicator(
-                                        value: appState.progress,
-                                        backgroundColor: Colors.white24,
-                                        valueColor: const AlwaysStoppedAnimation<Color>(Colors.green),
-                                        minHeight: 8,
-                                      ),
+                                      child: hasTotal
+                                        ? LinearProgressIndicator(
+                                            value: appState.progress,
+                                            backgroundColor: Colors.white24,
+                                            valueColor: const AlwaysStoppedAnimation<Color>(Colors.green),
+                                            minHeight: 8,
+                                          )
+                                        : const LinearProgressIndicator(
+                                            backgroundColor: Colors.white24,
+                                            valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
+                                            minHeight: 8,
+                                          ),
                                     ),
                                     const SizedBox(height: 12),
                                     Text(
-                                      'Downloading... $percent%',
+                                      hasTotal 
+                                        ? 'Downloading... $percent%'
+                                        : 'Downloading...',
                                       style: const TextStyle(
                                         color: Colors.white,
                                         fontSize: 16,
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      '$receivedStr / $totalStr',
-                                      style: const TextStyle(
-                                        color: Colors.white70,
-                                        fontSize: 13,
+                                    if (hasTotal) ...[
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        '$receivedStr / $totalStr',
+                                        style: const TextStyle(
+                                          color: Colors.white70,
+                                          fontSize: 13,
+                                        ),
                                       ),
-                                    ),
+                                    ] else ...[
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        appState.speedKbps > 0
+                                          ? '$receivedStr • ${appState.speedKbps.toStringAsFixed(1)} KB/s'
+                                          : receivedStr,
+                                        style: const TextStyle(
+                                          color: Colors.white70,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ],
                                     const SizedBox(height: 8),
                                     TextButton.icon(
                                       onPressed: () {
